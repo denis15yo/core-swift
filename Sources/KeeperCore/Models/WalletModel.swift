@@ -3,7 +3,7 @@ import Foundation
 public struct WalletModel: Equatable {
   public let identifier: String
   public let label: String
-  public let tag: String
+  public let tag: String?
   public let emoji: String
   public let tintColor: WalletTintColor
   
@@ -21,7 +21,7 @@ extension Wallet {
     WalletModel(
       identifier: id,
       label: metaData.label,
-      tag: "",
+      tag: tag,
       emoji: metaData.emoji,
       tintColor: metaData.tintColor
     )

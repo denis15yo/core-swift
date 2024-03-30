@@ -69,4 +69,15 @@ public final class WalletAddController {
     try walletsStoreUpdate.addWallets(wallets)
     try walletsStoreUpdate.makeWalletActive(wallets[0])
   }
+  
+  public func importWatchOnlyWallet(resolvableAddress: ResolvableAddress,
+                                    metaData: WalletMetaData) throws {
+    let wallet = Wallet(
+      identity: WalletIdentity(network: .mainnet, kind: .Watchonly(resolvableAddress)),
+      metaData: metaData,
+      setupSettings: WalletSetupSettings(backupDate: nil)
+    )
+    try walletsStoreUpdate.addWallets([wallet])
+    try walletsStoreUpdate.makeWalletActive(wallet)
+  }
 }

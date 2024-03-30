@@ -54,6 +54,19 @@ public struct Wallet: Codable, Hashable, Identifiable {
   public var id: String {
     identity.id
   }
+  
+  public var tag: String? {
+    switch identity.kind {
+    case .Regular:
+      return nil
+    case .Lockup:
+      return nil
+    case .Watchonly:
+      return "Watch only"
+    case .External:
+      return "Signer"
+    }
+  }
 }
 
 extension Wallet {
@@ -115,7 +128,12 @@ extension Wallet {
       case .Regular, .External:
         return try contract.address()
       case .Watchonly(let address):
-        throw Error.notAvailableWalletKind
+        switch address {
+        case .Resolved(let address):
+          return address
+        case .Domain(_, let address):
+          return address
+        }
       case .Lockup:
         throw Error.notAvailableWalletKind
       }

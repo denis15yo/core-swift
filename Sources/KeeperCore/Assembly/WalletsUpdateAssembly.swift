@@ -33,6 +33,10 @@ public final class WalletsUpdateAssembly {
     WalletEditController(walletsStoreUpdate: walletsStoreUpdate)
   }
   
+  public func watchOnlyWalletAddressInputController() -> WatchOnlyWalletAddressInputController {
+    WatchOnlyWalletAddressInputController(addressResolver: AddressResolver(dnsService: servicesAssembly.dnsService()))
+  }
+  
   public func chooseWalletController(activeWalletModels: [ActiveWalletModel]) -> ChooseWalletsController {
     ChooseWalletsController(
       activeWalletModels: activeWalletModels,

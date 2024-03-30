@@ -6,7 +6,7 @@ public enum ResolvableAddress: Hashable, Codable {
   /// Raw TON address (e.g. "EQf85gAj...")
   case Resolved(TonSwift.Address)
   /// TON.DNS name (e.g. "oleganza.ton")
-  case Domain(String)
+  case Domain(String, TonSwift.Address)
 }
 
 extension ResolvableAddress: CellCodable {
@@ -15,11 +15,12 @@ extension ResolvableAddress: CellCodable {
     case let .Resolved(address):
       try builder.store(uint: 0, bits: 2)
       try address.storeTo(builder: builder)
-    case let .Domain(domain):
+    case let .Domain(domain, address):
       try builder.store(uint: 1, bits: 2)
       let domainData = domain.data(using: .utf8) ?? Data()
       try builder.store(uint: domainData.count, bits: .domainDataCountLength)
       try builder.store(data: domainData)
+      try address.storeTo(builder: builder)
     }
   }
   public static func loadFrom(slice: Slice) throws -> ResolvableAddress {
@@ -35,7 +36,8 @@ extension ResolvableAddress: CellCodable {
         guard let domain = String(data: domainData, encoding: .utf8) else {
           throw TonError.custom("Invalid domain data")
         }
-        return .Domain(domain)
+        let address: TonSwift.Address = try s.loadType()
+        return .Domain(domain, address)
       default:
         throw TonError.custom("Invalid ResolvableAddress type");
       }
