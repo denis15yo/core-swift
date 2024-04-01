@@ -7,9 +7,13 @@ public final class ReceiveController {
     public let descriptionTokenName: String
     public let address: String?
     public let image: TokenImage
+    public let tag: String?
   }
   
   public var didUpdateModel: ((Model) -> Void)?
+  public var isRegularWallet: Bool {
+    walletsStore.activeWallet.isRegular
+  }
   
   private let token: Token
   private let walletsStore: WalletsStore
@@ -61,7 +65,8 @@ public final class ReceiveController {
         tokenName: tokenName,
         descriptionTokenName: descriptionTokenName,
         address: try? walletsStore.activeWallet.address.toString(bounceable: false),
-        image: image
+        image: image,
+        tag: walletsStore.activeWallet.tag
       )
     )
   }

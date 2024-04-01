@@ -19,6 +19,14 @@ public final class WalletBalanceController {
     try? wallet.address.toString(bounceable: false)
   }
   
+  public var isRegular: Bool {
+    wallet.isRegular
+  }
+  
+  public var walletTag: String? {
+    wallet.tag
+  }
+  
   public var backgroundUpdateState: BackgroundUpdateStore.State {
     get async {
       await backgroundUpdateStore.state
@@ -40,7 +48,7 @@ public final class WalletBalanceController {
     )
   }
 
-  private var wallet: Wallet
+  public private(set) var wallet: Wallet
   private let walletsStore: WalletsStore
   private let balanceStore: BalanceStore
   private let totalBalanceStore: TotalBalanceStore
@@ -147,6 +155,7 @@ private extension WalletBalanceController {
   }
   
   func updateFinishSetup() {
+    guard wallet.isRegular else { return }
     let didBackup = wallet.setupSettings.backupDate != nil
     let didFinishSetup = setupStore.isSetupFinished
     let isBiometryEnabled = securityStore.isBiometryEnabled
