@@ -4,41 +4,35 @@ import EventSource
 import TonSwift
 import OpenAPIRuntime
 
-public protocol BackgroundUpdateStoreObserver: AnyObject {
-  func didGetBackgroundUpdateStoreEvent(_ event: BackgroundUpdateStore.Event)
+public enum BackgroundUpdateState {
+  case connecting(addresses: [Address])
+  case connected(addresses: [Address])
+  case disconnected
+  case noConnection
+}
+
+public struct BackgroundUpdateEvent {
+  public let accountAddress: Address
+  public let lt: Int64
+  public let txHash: String
 }
 
 public actor BackgroundUpdateStore {
-  public enum State {
-    case connecting(addresses: [Address])
-    case connected(addresses: [Address])
-    case disconnected
-    case noConnection
-  }
-  
-  public struct UpdateEvent {
-    public let accountAddress: Address
-    public let lt: Int64
-    public let txHash: String
-  }
-  
+  typealias ObservationClosure = (Event) -> Void
   public enum Event {
-    case didUpdateState(State)
-    case didReceiveUpdateEvent(UpdateEvent)
+    case didUpdateState(BackgroundUpdateState)
+    case didReceiveUpdateEvent(BackgroundUpdateEvent)
   }
   
-  public var state: State = .disconnected {
+  public var state: BackgroundUpdateState = .disconnected {
     didSet {
-      notifyObservers(with: .didUpdateState(state))
+      observations.values.forEach { $0(.didUpdateState(state)) }
     }
   }
   
   private var task: Task<Void, Never>?
   private let jsonDecoder = JSONDecoder()
-  private var retryTimer: Timer?
-  
-  private var observers = [BackgroundUpdateStoreObserverWrapper]()
-  
+    
   private let streamingAPI: TonStreamingAPI.Client
   
   init(streamingAPI: TonStreamingAPI.Client) {
@@ -65,27 +59,37 @@ public actor BackgroundUpdateStore {
     task = nil
   }
   
-  public func addObserver(_ observer: BackgroundUpdateStoreObserver) {
-    removeNilObservers()
-    observers = observers + CollectionOfOne(
-      BackgroundUpdateStoreObserverWrapper(observer: observer)
-    )
+  private var observations = [UUID: ObservationClosure]()
+  
+  func addEventObserver<T: AnyObject>(_ observer: T,
+                                      closure: @escaping (T, Event) -> Void) -> ObservationToken {
+    let id = UUID()
+    let eventHandler: (Event) -> Void = { [weak self, weak observer] event in
+      guard let self else { return }
+      guard let observer else {
+        Task { await self.removeObservation(key: id) }
+        return
+      }
+      
+      closure(observer, event)
+    }
+    observations[id] = eventHandler
+    
+    return ObservationToken { [weak self] in
+      guard let self else { return }
+      Task { await self.removeObservation(key: id) }
+    }
   }
   
-  public func removeObserver(_ observer: BackgroundUpdateStoreObserver) {
-    removeNilObservers()
-    observers = observers.filter { $0.observer !== observer }
+  func removeObservation(key: UUID) {
+    observations.removeValue(forKey: key)
   }
 }
 
 private extension BackgroundUpdateStore {
   func connect(addresses: [Address]) {
-    self.retryTimer?.invalidate()
-    self.retryTimer = nil
-    
     self.task?.cancel()
-    
-    let runloop = RunLoop.current
+    self.task = nil
     
     let task = Task {
       let rawAddresses = addresses.map { $0.toRaw() }.joined(separator: ",")
@@ -112,15 +116,9 @@ private extension BackgroundUpdateStore {
         if error.isNoConnectionError {
           self.state = .noConnection
         } else {
-          let timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false, block: { [weak self] _ in
-            guard let self = self else { return }
-            Task {
-              await self.start(addresses: addresses)
-            }
-          })
-          self.retryTimer = timer
-          runloop.add(timer, forMode: .common)
           self.state = .disconnected
+          try? await Task.sleep(nanoseconds: 3_000_000_000)
+          self.connect(addresses: addresses)
         }
       }
     }
@@ -135,27 +133,15 @@ private extension BackgroundUpdateStore {
     do {
       let eventTransaction = try jsonDecoder.decode(EventSource.Transaction.self, from: eventData)
       let address = try Address.parse(eventTransaction.accountId)
-      let updateEvent = UpdateEvent(
+      let updateEvent = BackgroundUpdateEvent(
         accountAddress: address,
         lt: eventTransaction.lt,
         txHash: eventTransaction.txHash
       )
-      notifyObservers(with: .didReceiveUpdateEvent(updateEvent))
+      observations.values.forEach { $0(.didReceiveUpdateEvent(updateEvent)) }
     } catch {
       return
     }
-  }
-  
-  struct BackgroundUpdateStoreObserverWrapper {
-    weak var observer: BackgroundUpdateStoreObserver?
-  }
-  
-  func notifyObservers(with event: Event) {
-    observers.forEach { $0.observer?.didGetBackgroundUpdateStoreEvent(event) }
-  }
-  
-  func removeNilObservers() {
-    observers = observers.filter { $0.observer != nil }
   }
 }
 
@@ -171,6 +157,21 @@ public extension Swift.Error {
       }
     case let clientError as OpenAPIRuntime.ClientError:
       return clientError.underlyingError.isNoConnectionError
+    default:
+      return false
+    }
+  }
+  
+  var isCancelledError: Bool {
+    switch self {
+    case let urlError as URLError:
+      switch urlError.code {
+      case URLError.Code.cancelled:
+        return true
+      default: return false
+      }
+    case let clientError as OpenAPIRuntime.ClientError:
+      return clientError.underlyingError.isCancelledError
     default:
       return false
     }

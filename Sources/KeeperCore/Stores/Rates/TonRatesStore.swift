@@ -1,35 +1,30 @@
 import Foundation
 
-actor CurrencyStore {
+actor TonRatesStore {
   typealias ObservationClosure = (Event) -> Void
   enum Event {
-    case didChangeCurrency(currency: Currency)
+    case didUpdateRates(_ rates: [Rates.Rate])
   }
   
-  private let currencyService: CurrencyService
+  private let repository: RatesRepository
   
-  init(currencyService: CurrencyService) {
-    self.currencyService = currencyService
+  init(repository: RatesRepository) {
+    self.repository = repository
   }
   
-  var activeCurrency: Currency {
-    get {
-      do {
-        return try currencyService.getActiveCurrency()
-      } catch {
-        return .USD
-      }
-    }
-    set {
-      do {
-        try currencyService.setActiveCurrency(newValue)
-        observations
-          .values
-          .forEach { $0(.didChangeCurrency(currency: newValue)) }
-      } catch {}
+  func getTonRates() -> [Rates.Rate] {
+    do {
+      return try repository.getRates(jettons: []).ton
+    } catch {
+      return []
     }
   }
   
+  func setTonRates(_ tonRates: [Rates.Rate]) {
+    try? repository.saveRates(Rates(ton: tonRates, jettonsRates: []))
+    observations.values.forEach { $0(.didUpdateRates(tonRates)) }
+  }
+
   private var observations = [UUID: ObservationClosure]()
   
   func addEventObserver<T: AnyObject>(_ observer: T,

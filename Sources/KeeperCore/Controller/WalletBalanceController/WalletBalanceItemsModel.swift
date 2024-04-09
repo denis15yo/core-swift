@@ -1,11 +1,16 @@
 import Foundation
 
-public struct WalletBalanceModel {
+public struct WalletBalanceItemsModel {
   public let tonItems: [Item]
   public let jettonsItems: [Item]
+  
+  public init(tonItems: [Item], jettonsItems: [Item]) {
+    self.tonItems = tonItems
+    self.jettonsItems = jettonsItems
+  }
 }
 
-public extension WalletBalanceModel {
+public extension WalletBalanceItemsModel {
   struct Item {
     public let identifier: String
     public let token: Token

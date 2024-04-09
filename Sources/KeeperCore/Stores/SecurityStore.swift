@@ -1,14 +1,10 @@
 import Foundation
 
-enum SecurityStoreEvent {
-  case didUpdateSecuritySettings
-}
-
-protocol SecurityStoreObserver: AnyObject {
-  func didGetSecurityStoreEvent(_ event: SecurityStoreEvent)
-}
-
-final class SecurityStore {
+actor SecurityStore {
+  typealias ObservationClosure = (Event) -> Void
+  enum Event {
+    case didUpdateSecuritySettings
+  }
   
   private let securityService: SecurityService
   
@@ -22,32 +18,32 @@ final class SecurityStore {
   
   func setIsBiometryEnabled(_ isBiometryEnabled: Bool) throws {
     try securityService.updateBiometry(isBiometryEnabled)
-    notifyObservers(event: .didUpdateSecuritySettings)
+    observations.values.forEach { $0(.didUpdateSecuritySettings) }
   }
   
-  private var observers = [SecurityStoreObserverWrapper]()
+  private var observations = [UUID: ObservationClosure]()
   
-  struct SecurityStoreObserverWrapper {
-    weak var observer: SecurityStoreObserver?
+  func addEventObserver<T: AnyObject>(_ observer: T,
+                                      closure: @escaping (T, Event) -> Void) -> ObservationToken {
+    let id = UUID()
+    let eventHandler: (Event) -> Void = { [weak self, weak observer] event in
+      guard let self else { return }
+      guard let observer else {
+        Task { await self.removeObserver(id: id) }
+        return
+      }
+      
+      closure(observer, event)
+    }
+    observations[id] = eventHandler
+    
+    return ObservationToken { [weak self] in
+      guard let self else { return }
+      Task { await self.removeObserver(id: id) }
+    }
   }
   
-  func addObserver(_ observer: SecurityStoreObserver) {
-    removeNilObservers()
-    observers = observers + CollectionOfOne(SecurityStoreObserverWrapper(observer: observer))
-  }
-  
-  func removeObserver(_ observer: CurrencyStoreObserver) {
-    removeNilObservers()
-    observers = observers.filter { $0.observer !== observer }
-  }
-}
-
-private extension SecurityStore {
-  func removeNilObservers() {
-    observers = observers.filter { $0.observer != nil }
-  }
-  
-  func notifyObservers(event: SecurityStoreEvent) {
-    observers.forEach { $0.observer?.didGetSecurityStoreEvent(event) }
+  func removeObserver(id: UUID) {
+    observations.removeValue(forKey: id)
   }
 }

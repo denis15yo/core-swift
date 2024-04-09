@@ -1,14 +1,11 @@
 import Foundation
 
-enum BackupStoreEvent {
-  case didBackup(wallet: Wallet)
-}
-
-protocol BackupStoreObserver: AnyObject {
-  func didGetBackupStoreEvent(_ event: BackupStoreEvent)
-}
-
 final class BackupStore {
+  typealias ObservationClosure = (Event) -> Void
+  enum Event {
+    case didBackup(wallet: Wallet)
+  }
+  
   private let walletService: WalletsService
   
   init(walletService: WalletsService) {
@@ -20,32 +17,28 @@ final class BackupStore {
       wallet: wallet,
       setupSettings: WalletSetupSettings(backupDate: Date())
     )
-    notifyObservers(event: .didBackup(wallet: wallet))
+    observations.values.forEach { $0(.didBackup(wallet: wallet)) }
   }
   
-  private var observers = [BackupStoreObserverWrapper]()
+  private var observations = [UUID: ObservationClosure]()
   
-  struct BackupStoreObserverWrapper {
-    weak var observer: BackupStoreObserver?
-  }
-  
-  func addObserver(_ observer: BackupStoreObserver) {
-    removeNilObservers()
-    observers = observers + CollectionOfOne(BackupStoreObserverWrapper(observer: observer))
-  }
-  
-  func removeObserver(_ observer: BackupStoreObserver) {
-    removeNilObservers()
-    observers = observers.filter { $0.observer !== observer }
-  }
-}
-
-private extension BackupStore {
-  func removeNilObservers() {
-    observers = observers.filter { $0.observer != nil }
-  }
-  
-  func notifyObservers(event: BackupStoreEvent) {
-    observers.forEach { $0.observer?.didGetBackupStoreEvent(event) }
+  func addEventObserver<T: AnyObject>(_ observer: T,
+                                      closure: @escaping (T, Event) -> Void) -> ObservationToken {
+    let id = UUID()
+    let eventHandler: (Event) -> Void = { [weak self, weak observer] event in
+      guard let self else { return }
+      guard let observer else {
+        observations.removeValue(forKey: id)
+        return
+      }
+      
+      closure(observer, event)
+    }
+    observations[id] = eventHandler
+    
+    return ObservationToken { [weak self] in
+      guard let self else { return }
+      observations.removeValue(forKey: id)
+    }
   }
 }

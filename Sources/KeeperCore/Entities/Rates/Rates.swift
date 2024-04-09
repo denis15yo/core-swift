@@ -1,18 +1,18 @@
 import Foundation
 
-struct Rates: Codable {
-  struct Rate: Codable {
-    let currency: Currency
-    let rate: Decimal
-    let diff24h: String?
+public struct Rates: Codable {
+  public struct Rate: Codable {
+    public let currency: Currency
+    public let rate: Decimal
+    public let diff24h: String?
   }
   
-  struct JettonRate: Codable {
-    let jettonInfo: JettonInfo
-    var rates: [Rate]
+  public struct JettonRate: Codable {
+    public let jettonInfo: JettonInfo
+    public var rates: [Rate]
   }
   
-  var ton: [Rate]
-  var jettonsRates: [JettonRate]
+  public var ton: [Rate]
+  public var jettonsRates: [JettonRate]
 }
 

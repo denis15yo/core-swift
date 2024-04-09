@@ -1,14 +1,10 @@
 import Foundation
 
-enum SetupStoreEvent {
-  case didUpdateSetupIsFinished
-}
-
-protocol SetupStoreObserver: AnyObject {
-  func didGetSetupStoreEvent(_ event: SetupStoreEvent)
-}
-
-final class SetupStore {
+actor SetupStore {
+  typealias ObservationClosure = (Event) -> Void
+  enum Event {
+    case didUpdateSetupIsFinished
+  }
   
   private let setupService: SetupService
   
@@ -22,32 +18,32 @@ final class SetupStore {
   
   func setSetupIsFinished() throws {
     try setupService.setSetupFinished()
-    notifyObservers(event: .didUpdateSetupIsFinished)
+    observations.values.forEach { $0(.didUpdateSetupIsFinished) }
   }
-  
-  private var observers = [SetupStoreObserverWrapper]()
-  
-  struct SetupStoreObserverWrapper {
-    weak var observer: SetupStoreObserver?
-  }
-  
-  func addObserver(_ observer: SetupStoreObserver) {
-    removeNilObservers()
-    observers = observers + CollectionOfOne(SetupStoreObserverWrapper(observer: observer))
-  }
-  
-  func removeObserver(_ observer: CurrencyStoreObserver) {
-    removeNilObservers()
-    observers = observers.filter { $0.observer !== observer }
-  }
-}
 
-private extension SetupStore {
-  func removeNilObservers() {
-    observers = observers.filter { $0.observer != nil }
+  private var observations = [UUID: ObservationClosure]()
+  
+  func addEventObserver<T: AnyObject>(_ observer: T,
+                                      closure: @escaping (T, Event) -> Void) -> ObservationToken {
+    let id = UUID()
+    let eventHandler: (Event) -> Void = { [weak self, weak observer] event in
+      guard let self else { return }
+      guard let observer else {
+        Task { await self.removeObserver(id: id) }
+        return
+      }
+      
+      closure(observer, event)
+    }
+    observations[id] = eventHandler
+    
+    return ObservationToken { [weak self] in
+      guard let self else { return }
+      Task { await self.removeObserver(id: id) }
+    }
   }
   
-  func notifyObservers(event: SetupStoreEvent) {
-    observers.forEach { $0.observer?.didGetSetupStoreEvent(event) }
+  func removeObserver(id: UUID) {
+    observations.removeValue(forKey: id)
   }
 }

@@ -1,18 +1,15 @@
 import Foundation
 import CoreComponents
 
-enum WalletsStoreUpdateEvent {
-  case didAddWallets([Wallet])
-  case didUpdateActiveWallet
-  case didUpdateWalletMetadata(Wallet, WalletMetaData)
-  case didUpdateWalletsOrder
-}
-
-protocol WalletsStoreUpdateObserver: AnyObject {
-  func didGetWalletsStoreUpdateEvent(_ event: WalletsStoreUpdateEvent)
-}
-
 final class WalletsStoreUpdate {
+  typealias ObservationClosure = (Event) -> Void
+  enum Event {
+    case didAddWallets([Wallet])
+    case didUpdateActiveWallet
+    case didUpdateWalletMetadata(Wallet, WalletMetaData)
+    case didUpdateWalletsOrder
+  }
+  
   private let walletsService: WalletsService
   
   init(walletsService: WalletsService) {
@@ -21,48 +18,43 @@ final class WalletsStoreUpdate {
   
   func addWallets(_ wallets: [Wallet]) throws {
     try walletsService.addWallets(wallets)
-    notifyObservers(event: .didAddWallets(wallets))
+    observations.values.forEach { $0(.didAddWallets(wallets)) }
   }
-
+  
   func makeWalletActive(_ wallet: Wallet) throws {
     try walletsService.setWalletActive(wallet)
-    notifyObservers(event: .didUpdateActiveWallet)
+    observations.values.forEach { $0(.didUpdateActiveWallet) }
   }
-
+  
   func moveWallet(fromIndex: Int, toIndex: Int) throws {
     try walletsService.moveWallet(fromIndex: fromIndex, toIndex: toIndex)
-    notifyObservers(event: .didUpdateWalletsOrder)
+    observations.values.forEach { $0(.didUpdateWalletsOrder) }
   }
   
   func updateWallet(_ wallet: Wallet, metaData: WalletMetaData) throws {
     try walletsService.updateWallet(wallet: wallet, metaData: metaData)
-    notifyObservers(event: .didUpdateWalletMetadata(wallet, metaData))
-  }
-
-  private var observers = [WalletsStoreUpdateObserverWrapper]()
-  
-  struct WalletsStoreUpdateObserverWrapper {
-    weak var observer: WalletsStoreUpdateObserver?
+    observations.values.forEach { $0(.didUpdateWalletMetadata(wallet, metaData)) }
   }
   
-  func addObserver(_ observer: WalletsStoreUpdateObserver) {
-    removeNilObservers()
-    observers = observers + CollectionOfOne(WalletsStoreUpdateObserverWrapper(observer: observer))
-  }
+  private var observations = [UUID: ObservationClosure]()
   
-  func removeObserver(_ observer: WalletsStoreObserver) {
-    removeNilObservers()
-    observers = observers.filter { $0.observer !== observer }
+  func addEventObserver<T: AnyObject>(_ observer: T,
+                                      closure: @escaping (T, Event) -> Void) -> ObservationToken {
+    let id = UUID()
+    let eventHandler: (Event) -> Void = { [weak self, weak observer] event in
+      guard let self else { return }
+      guard let observer else {
+        observations.removeValue(forKey: id)
+        return
+      }
+      
+      closure(observer, event)
+    }
+    observations[id] = eventHandler
+    
+    return ObservationToken { [weak self] in
+      guard let self else { return }
+      observations.removeValue(forKey: id)
+    }
   }
 }
-
-private extension WalletsStoreUpdate {
-  func removeNilObservers() {
-    observers = observers.filter { $0.observer != nil }
-  }
-  
-  func notifyObservers(event: WalletsStoreUpdateEvent) {
-    observers.forEach { $0.observer?.didGetWalletsStoreUpdateEvent(event) }
-  }
-}
-

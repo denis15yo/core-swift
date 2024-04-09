@@ -20,6 +20,7 @@ public struct TonBalance: Codable {
 public struct JettonBalance: Codable {
   public let item: JettonItem
   public let quantity: BigUInt
+  public let rates: [Currency: Rates.Rate]
 }
 
 public struct JettonItem: Codable, Equatable {

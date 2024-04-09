@@ -6,13 +6,21 @@ struct WalletBalanceMapper {
   private let amountFormatter: AmountFormatter
   private let decimalAmountFormatter: DecimalAmountFormatter
   private let rateConverter: RateConverter
+  private let dateFormatter: DateFormatter
   
   init(amountFormatter: AmountFormatter,
        decimalAmountFormatter: DecimalAmountFormatter,
-       rateConverter: RateConverter) {
+       rateConverter: RateConverter,
+       dateFormatter: DateFormatter) {
     self.amountFormatter = amountFormatter
     self.decimalAmountFormatter = decimalAmountFormatter
     self.rateConverter = rateConverter
+    self.dateFormatter = dateFormatter
+  }
+  
+  func makeUpdatedDate(_ date: Date) -> String {
+    dateFormatter.dateFormat = "MMM d, HH:mm"
+    return dateFormatter.string(from: date)
   }
   
   func mapTotalBalance(_ totalBalance: TotalBalance, currency: Currency) -> String {
@@ -24,27 +32,27 @@ struct WalletBalanceMapper {
     )
   }
   
-  func mapBalance(walletBalance: WalletBalance,
+  func mapBalance(balance: Balance,
                   rates: Rates,
-                  currency: Currency) -> WalletBalanceModel {
+                  currency: Currency) -> WalletBalanceItemsModel {
     let tonItem = mapTon(
-      tonBalance: walletBalance.balance.tonBalance,
+      tonBalance: balance.tonBalance,
       tonRates: rates.ton,
       currency: currency
     )
     
     let jettonItems = mapJettons(
-      jettonsBalance: walletBalance.balance.jettonsBalance,
+      jettonsBalance: balance.jettonsBalance,
       jettonsRates: rates.jettonsRates,
       currency: currency
     )
     
-    return WalletBalanceModel(tonItems: [tonItem], jettonsItems: jettonItems)
+    return WalletBalanceItemsModel(tonItems: [tonItem], jettonsItems: jettonItems)
   }
   
   func mapTon(tonBalance: TonBalance,
               tonRates: [Rates.Rate],
-              currency: Currency) -> WalletBalanceModel.Item {
+              currency: Currency) -> WalletBalanceItemsModel.Item {
     let bigUIntAmount = BigUInt(tonBalance.amount)
     let amount = amountFormatter.formatAmount(
       bigUIntAmount,
@@ -74,7 +82,7 @@ struct WalletBalanceMapper {
       diff = rate.diff24h == "0" ? nil : rate.diff24h
     }
     
-    return WalletBalanceModel.Item(
+    return WalletBalanceItemsModel.Item(
       identifier: .tonIdentifier,
       token: .ton,
       image: .ton,
@@ -88,7 +96,7 @@ struct WalletBalanceMapper {
   
   func mapJettons(jettonsBalance: [JettonBalance],
                   jettonsRates: [Rates.JettonRate],
-                  currency: Currency) -> [WalletBalanceModel.Item] {
+                  currency: Currency) -> [WalletBalanceItemsModel.Item] {
     var unverified = [JettonBalance]()
     var verified = [JettonBalance]()
     for jettonBalance in jettonsBalance {
@@ -113,7 +121,7 @@ struct WalletBalanceMapper {
   
   func mapJetton(jettonBalance: JettonBalance,
                  jettonRates: Rates.JettonRate?,
-                 currency: Currency) -> WalletBalanceModel.Item {
+                 currency: Currency) -> WalletBalanceItemsModel.Item {
     let amount = amountFormatter.formatAmount(
       jettonBalance.quantity,
       fractionDigits: jettonBalance.item.jettonInfo.fractionDigits,
@@ -123,7 +131,7 @@ struct WalletBalanceMapper {
     var price: String?
     var convertedAmount: String?
     var diff: String?
-    if let rate = jettonRates?.rates.first(where: { $0.currency == currency }) {
+    if let rate = jettonBalance.rates[currency] {
       let converted = rateConverter.convert(
         amount: jettonBalance.quantity,
         amountFractionLength: jettonBalance.item.jettonInfo.fractionDigits,
@@ -141,7 +149,7 @@ struct WalletBalanceMapper {
       )
       diff = rate.diff24h == "0" ? nil : rate.diff24h
     }
-    return WalletBalanceModel.Item(
+    return WalletBalanceItemsModel.Item(
       identifier: jettonBalance.item.jettonInfo.address.toRaw(),
       token: .jetton(jettonBalance.item),
       image: .url(jettonBalance.item.jettonInfo.imageURL),

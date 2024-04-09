@@ -1,66 +1,75 @@
 import Foundation
 import CoreComponents
 
-enum WalletsStoreEvent {
-  case didAddWallets([Wallet])
-  case didUpdateActiveWallet
-  case didUpdateWalletMetadata(Wallet)
-  case didUpdateWalletsOrder
-  case didUpdateWalletBackupState(Wallet)
-}
-
-protocol WalletsStoreObserver: AnyObject {
-  func didGetWalletsStoreEvent(_ event: WalletsStoreEvent)
-}
-
 final class WalletsStore {
+  typealias ObservationClosure = (Event) -> Void
+  enum Event {
+    case didAddWallets([Wallet])
+    case didUpdateActiveWallet
+    case didUpdateWalletMetadata(Wallet)
+    case didUpdateWalletsOrder
+    case didUpdateWalletBackupState(Wallet)
+  }
+  
   public private(set) var wallets: [Wallet]
   public private(set) var activeWallet: Wallet
   
+  private var walletsStoreUpdateObservationToken: ObservationToken?
+  private var backupStoreObservationToken: ObservationToken?
+  
   private let walletsService: WalletsService
   private let backupStore: BackupStore
+  private let walletsStoreUpdate: WalletsStoreUpdate
   
   init(wallets: [Wallet],
        activeWallet: Wallet,
        walletsService: WalletsService,
-       backupStore: BackupStore) {
+       backupStore: BackupStore,
+       walletsStoreUpdate: WalletsStoreUpdate) {
     self.wallets = wallets
     self.activeWallet = activeWallet
     self.walletsService = walletsService
     self.backupStore = backupStore
+    self.walletsStoreUpdate = walletsStoreUpdate
     
-    backupStore.addObserver(self)
+    self.walletsStoreUpdateObservationToken = walletsStoreUpdate.addEventObserver(self) { observer, event in
+      observer.didGetWalletsStoreUpdateEvent(event)
+    }
+    
+    self.backupStoreObservationToken = backupStore.addEventObserver(self) { observer, event in
+      observer.didGetBackupStoreEvent(event)
+    }
+  }
+  
+  deinit {
+    walletsStoreUpdateObservationToken?.cancel()
   }
 
-  private var observers = [WalletsStoreObserverWrapper]()
+  private var observations = [UUID: ObservationClosure]()
   
-  struct WalletsStoreObserverWrapper {
-    weak var observer: WalletsStoreObserver?
-  }
-  
-  func addObserver(_ observer: WalletsStoreObserver) {
-    removeNilObservers()
-    observers = observers + CollectionOfOne(WalletsStoreObserverWrapper(observer: observer))
-  }
-  
-  func removeObserver(_ observer: WalletsStoreObserver) {
-    removeNilObservers()
-    observers = observers.filter { $0.observer !== observer }
+  func addEventObserver<T: AnyObject>(_ observer: T,
+                                      closure: @escaping (T, Event) -> Void) -> ObservationToken {
+    let id = UUID()
+    let eventHandler: (Event) -> Void = { [weak self, weak observer] event in
+      guard let self else { return }
+      guard let observer else {
+        observations.removeValue(forKey: id)
+        return
+      }
+      
+      closure(observer, event)
+    }
+    observations[id] = eventHandler
+    
+    return ObservationToken { [weak self] in
+      guard let self else { return }
+      observations.removeValue(forKey: id)
+    }
   }
 }
 
 private extension WalletsStore {
-  func removeNilObservers() {
-    observers = observers.filter { $0.observer != nil }
-  }
-  
-  func notifyObservers(event: WalletsStoreEvent) {
-    observers.forEach { $0.observer?.didGetWalletsStoreEvent(event) }
-  }
-}
-
-extension WalletsStore: WalletsStoreUpdateObserver {
-  func didGetWalletsStoreUpdateEvent(_ event: WalletsStoreUpdateEvent) {
+  func didGetWalletsStoreUpdateEvent(_ event: WalletsStoreUpdate.Event) {
     switch event {
     case .didAddWallets(let addedWallets):
       do {
@@ -68,14 +77,14 @@ extension WalletsStore: WalletsStoreUpdateObserver {
         let activeWallet = try walletsService.getActiveWallet()
         self.wallets = wallets
         self.activeWallet = activeWallet
-        notifyObservers(event: .didAddWallets(addedWallets))
+        observations.values.forEach { $0(.didAddWallets(addedWallets)) }
       } catch {
         print("Log: failed to update WalletsStore after add wallets: \(addedWallets), error: \(error)")
       }
     case .didUpdateActiveWallet:
       do {
         self.activeWallet = try walletsService.getActiveWallet()
-        notifyObservers(event: .didUpdateActiveWallet)
+        observations.values.forEach { $0(.didUpdateActiveWallet) }
       } catch {
         print("Log: failed to update WalletsStore after active wallet update, error: \(error)")
       }
@@ -89,7 +98,7 @@ extension WalletsStore: WalletsStoreUpdateObserver {
           print("Log: Failed to get updated wallet after update wallets metadata \(wallet)")
           return
         }
-        notifyObservers(event: .didUpdateWalletMetadata(updatedWallet))
+        observations.values.forEach { $0(.didUpdateWalletMetadata(updatedWallet)) }
       } catch {
         print("Log: failed to update WalletsStore after update wallets metadata \(wallet), error: \(error)")
       }
@@ -99,16 +108,14 @@ extension WalletsStore: WalletsStoreUpdateObserver {
         let activeWallet = try walletsService.getActiveWallet()
         self.wallets = wallets
         self.activeWallet = activeWallet
-        notifyObservers(event: .didUpdateWalletsOrder)
+        observations.values.forEach { $0(.didUpdateWalletsOrder) }
       } catch {
         print("Log: failed to update WalletsStore after update wallets order, error: \(error)")
       }
     }
   }
-}
-
-extension WalletsStore: BackupStoreObserver {
-  func didGetBackupStoreEvent(_ event: BackupStoreEvent) {
+  
+  func didGetBackupStoreEvent(_ event: BackupStore.Event) {
     switch event {
     case .didBackup(let wallet):
       do {
@@ -120,7 +127,7 @@ extension WalletsStore: BackupStoreObserver {
           print("Log: Failed to get updated wallet after wallet backup \(wallet)")
           return
         }
-        notifyObservers(event: .didUpdateWalletBackupState(updatedWallet))
+        observations.values.forEach { $0(.didUpdateWalletBackupState(updatedWallet)) }
       } catch {
         print("Log: Failed to update WalletsStore wallet after wallet backup \(wallet), error: \(error)")
       }
