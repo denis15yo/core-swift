@@ -2,165 +2,263 @@ import Foundation
 
 public final class WalletBalanceController {
   
-  public var didUpdateBalance: (() -> Void)?
-  public var didUpdateTotalBalance: (() -> Void)?
-  public var didUpdateFinishSetup: ((WalletBalanceSetupModel) -> Void)?
-  public var didUpdateBackgroundUpdateState: ((BackgroundUpdateStore.State) -> Void)?
-  
-  public var address: String {
-    do {
-      return try wallet.address.toShortString(bounceable: false)
-    } catch {
-      return " "
+  actor State {
+    var totalBalanceState: TotalBalanceState?
+    var backgroundUpdateState: BackgroundUpdateState = .disconnected
+    
+    func setTotalBalanceState(_ totalBalanceState: TotalBalanceState?) {
+      self.totalBalanceState = totalBalanceState
+    }
+    
+    func setBackgroundUpdateState(_ backgroundUpdateState: BackgroundUpdateState) {
+      self.backgroundUpdateState = backgroundUpdateState
     }
   }
   
-  public var fullAddress: String? {
-    try? wallet.address.toString(bounceable: false)
-  }
-  
-  public var isRegular: Bool {
-    wallet.isRegular
-  }
-  
-  public var walletTag: String? {
-    wallet.tag
-  }
-  
-  public var backgroundUpdateState: BackgroundUpdateStore.State {
-    get async {
-      await backgroundUpdateStore.state
+  actor BalanceState {
+    var walletBalance: WalletBalance?
+    
+    func setWalletBalance(_ walletBalance: WalletBalance) {
+      self.walletBalance = walletBalance
     }
   }
   
-  public var walletBalanceModel: WalletBalanceModel {
-    get {
-      return getWalletBalanceModel()
-    }
+  public struct StateModel {
+    public let totalBalance: String
+    public let stateDate: String?
+    public let backgroundUpdateState: BackgroundUpdateState
+    public let walletType: WalletModel.WalletType
+    public let shortAddress: String?
+    public let fullAddress: String?
   }
   
-  public var totalBalanceFormatted: String {
-    let currency = currencyStore.getActiveCurrency()
-    return walletBalanceMapper.mapTotalBalance(totalBalanceStore.getTotalBalance(
-      wallet: wallet,
-      currency: currency),
-      currency: currency
-    )
-  }
+  private var didUpdateState: ((StateModel) -> Void)?
+  private var didUpdateBalanceState: ((WalletBalanceItemsModel) -> Void)?
+  private var didUpdateSetupState: ((WalletBalanceSetupModel?) -> Void)?
 
-  public private(set) var wallet: Wallet
+  private let state = State()
+  private let balanceState = BalanceState()
+  
+  private let wallet: Wallet
   private let walletsStore: WalletsStore
-  private let balanceStore: BalanceStore
-  private let totalBalanceStore: TotalBalanceStore
-  private let ratesStore: RatesStore
+  private let walletBalanceStore: WalletBalanceStore
+  private let walletTotalBalanceStore: WalletTotalBalanceStore
+  private let tonRatesStore: TonRatesStore
   private let currencyStore: CurrencyStore
-  private let securityStore: SecurityStore
   private let setupStore: SetupStore
+  private let securityStore: SecurityStore
   private let backgroundUpdateStore: BackgroundUpdateStore
   private let walletBalanceMapper: WalletBalanceMapper
-    
+  
   init(wallet: Wallet,
        walletsStore: WalletsStore,
-       balanceStore: BalanceStore,
-       totalBalanceStore: TotalBalanceStore,
-       ratesStore: RatesStore,
+       walletBalanceStore: WalletBalanceStore,
+       walletTotalBalanceStore: WalletTotalBalanceStore,
+       tonRatesStore: TonRatesStore,
        currencyStore: CurrencyStore,
-       securityStore: SecurityStore,
        setupStore: SetupStore,
+       securityStore: SecurityStore,
        backgroundUpdateStore: BackgroundUpdateStore,
        walletBalanceMapper: WalletBalanceMapper) {
     self.wallet = wallet
     self.walletsStore = walletsStore
-    self.balanceStore = balanceStore
-    self.totalBalanceStore = totalBalanceStore
-    self.ratesStore = ratesStore
+    self.walletBalanceStore = walletBalanceStore
+    self.walletTotalBalanceStore = walletTotalBalanceStore
+    self.tonRatesStore = tonRatesStore
     self.currencyStore = currencyStore
-    self.securityStore = securityStore
     self.setupStore = setupStore
+    self.securityStore = securityStore
     self.backgroundUpdateStore = backgroundUpdateStore
     self.walletBalanceMapper = walletBalanceMapper
-    startStoresObservation()
-  }
-
-  public func loadBalance() {
-    updateFinishSetup()
-    updateBalance()
   }
   
-  public func finishSetup() {
-    try? setupStore.setSetupIsFinished()
+  public func start(didUpdateState: ((StateModel) -> Void)?,
+                    didUpdateBalanceState: ((WalletBalanceItemsModel) -> Void)?,
+                    didUpdateSetupState: ((WalletBalanceSetupModel?) -> Void)?) async {
+    self.didUpdateState = didUpdateState
+    self.didUpdateBalanceState = didUpdateBalanceState
+    self.didUpdateSetupState = didUpdateSetupState
+    await startObservations()
+    await setInitialState()
   }
   
-  public func setIsBiometryEnabled(_ isBiometryEnabled: Bool) -> Bool {
+  public func setIsBiometryEnabled(_ isBiometryEnabled: Bool) async -> Bool {
     do {
-      try securityStore.setIsBiometryEnabled(isBiometryEnabled)
+      try await securityStore.setIsBiometryEnabled(isBiometryEnabled)
       return isBiometryEnabled
     } catch {
       return !isBiometryEnabled
     }
   }
+  
+  public func finishSetup() async {
+    try? await setupStore.setSetupIsFinished()
+  }
 }
 
 private extension WalletBalanceController {
-  func getWalletBalanceModel() -> WalletBalanceModel {
-    let currency = currencyStore.getActiveCurrency()
-    let balanceModel: WalletBalanceModel
-    do {
-      let walletBalance = try balanceStore.getBalance(wallet: wallet)
-      let rates = ratesStore.getRates(jettons: walletBalance.balance.jettonsBalance.map { $0.item.jettonInfo })
-      balanceModel = walletBalanceMapper.mapBalance(
-        walletBalance: walletBalance,
-        rates: rates,
-        currency: currency
-      )
-    } catch {
-      balanceModel = WalletBalanceModel(tonItems: [], jettonsItems: [])
+  func startObservations() async {
+    _ = await walletTotalBalanceStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .didUpdateTotalBalance(let totalBalanceState, let address):
+        guard let walletAddress = try? observer.wallet.address else { return }
+        guard walletAddress == address else { return }
+        Task { await observer.didUpdateTotalBalanceState(totalBalanceState) }
+      }
     }
-    return balanceModel
+    
+    _ = await backgroundUpdateStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .didUpdateState(let backgroundUpdateState):
+        Task { await observer.didUpdateBackgroundUpdateState(backgroundUpdateState) }
+      default: break
+      }
+    }
+    
+    _ = await walletBalanceStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .balanceUpdate(let balance, let address):
+        guard let walletAddress = try? observer.wallet.address else { return }
+        guard walletAddress == address else { return }
+        Task { await observer.didUpdateBalanceState(balance)}
+      }
+    }
+    
+    _ = await tonRatesStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .didUpdateRates(let rates):
+        Task { await observer.didUpdateTonRates(rates)}
+      }
+    }
+    
+    _ = await setupStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .didUpdateSetupIsFinished:
+        Task { await observer.didUpdateSetup(wallet: observer.wallet) }
+      }
+    }
+    
+    _ = await securityStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .didUpdateSecuritySettings:
+        Task { await observer.didUpdateSetup(wallet: observer.wallet) }
+      }
+    }
+    
+    _ = walletsStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .didUpdateWalletBackupState(let wallet):
+        guard wallet == self.wallet else { return }
+        Task { await observer.didUpdateSetup(wallet: wallet) }
+      default: break
+      }
+    }
   }
   
-  func didReceiveBalanceUpdateEvent(_ event: BalanceStore.Event) {
-    switch event.result {
-    case .success:
-      updateBalance()
-    case .failure(let error):
-      // show error
-      print(error)
+  func setInitialState() async {
+    if let totalBalanceState = try? await walletTotalBalanceStore.getTotalBalanceState(walletAddress: wallet.address) {
+      await state.setTotalBalanceState(totalBalanceState)
     }
+    await state.setBackgroundUpdateState(await backgroundUpdateStore.state)
+    let model = await getStateModel()
+    didUpdateState?(model)
+    
+    if let walletBalanceState = try? await walletBalanceStore.getBalanceState(walletAddress: wallet.address) {
+      await balanceState.setWalletBalance(walletBalanceState.walletBalance)
+    }
+    let balanceModel = await getBalanceModel()
+    didUpdateBalanceState?(balanceModel)
+    
+    let setupModel = await getSetupModel(wallet: wallet)
+    didUpdateSetupState?(setupModel)
   }
   
-  func didReceiveRatesUpdateEvent() {
-    updateBalance()
+  func didUpdateTotalBalanceState(_ totalBalanceState: TotalBalanceState) async {
+    await state.setTotalBalanceState(totalBalanceState)
+    let model = await getStateModel()
+    didUpdateState?(model)
   }
   
-  func updateBalance() {
-    didUpdateBalance?()
+  func didUpdateBackgroundUpdateState(_ backgroundUpdateState: BackgroundUpdateState) async {
+    await state.setBackgroundUpdateState(backgroundUpdateState)
+    let model = await getStateModel()
+    didUpdateState?(model)
   }
   
-  func startStoresObservation() {
-    currencyStore.addObserver(self)
-    walletsStore.addObserver(self)
-    setupStore.addObserver(self)
-    securityStore.addObserver(self)
-    totalBalanceStore.addObserver(self)
-    Task {
-      await balanceStore.addObserver(self)
-    }
-    Task {
-      await ratesStore.addObserver(self)
-    }
-    Task {
-      await backgroundUpdateStore.addObserver(self)
-    }
+  func didUpdateBalanceState(_ walletBalanceState: WalletBalanceState) async {
+    await balanceState.setWalletBalance(walletBalanceState.walletBalance)
+    let model = await getBalanceModel()
+    didUpdateBalanceState?(model)
   }
   
-  func updateFinishSetup() {
-    guard wallet.isRegular else { return }
+  func didUpdateTonRates(_ tonRates: [Rates.Rate]) async {
+    let model = await getBalanceModel()
+    didUpdateBalanceState?(model)
+  }
+  
+  func didUpdateSetup(wallet: Wallet) async {
+    let setupModel = await getSetupModel(wallet: wallet)
+    didUpdateSetupState?(setupModel)
+  }
+  
+  func getStateModel() async -> StateModel {
+    let formattedTotalBalance: String
+    let stateDate: String?
+    let currency = await currencyStore.activeCurrency
+    switch await state.totalBalanceState {
+    case .none:
+      formattedTotalBalance = "-"
+      stateDate = nil
+    case .previous(let totalBalance):
+      formattedTotalBalance = walletBalanceMapper.mapTotalBalance(totalBalance, currency: currency)
+      stateDate = walletBalanceMapper.makeUpdatedDate(totalBalance.date)
+    case .current(let totalBalance):
+      formattedTotalBalance = walletBalanceMapper.mapTotalBalance(totalBalance, currency: currency)
+      stateDate = nil
+    }
+    
+    return StateModel(
+      totalBalance: formattedTotalBalance,
+      stateDate: stateDate,
+      backgroundUpdateState: await state.backgroundUpdateState,
+      walletType: wallet.model.walletType,
+      shortAddress: try? wallet.address.toShortString(bounceable: false),
+      fullAddress: try? wallet.address.toString(bounceable: false)
+    )
+  }
+  
+  func getBalanceModel() async -> WalletBalanceItemsModel {
+    let balance: Balance
+    if let walletBalance = await balanceState.walletBalance {
+      balance = walletBalance.balance
+    } else {
+      balance = Balance(tonBalance: TonBalance(amount: 0), jettonsBalance: [])
+    }
+
+    let rates = await tonRatesStore.getTonRates()
+    let currency = await currencyStore.activeCurrency
+    return walletBalanceMapper.mapBalance(
+      balance: balance,
+      rates: Rates(
+        ton: rates,
+        jettonsRates: []
+      ),
+      currency: currency
+    )
+  }
+  
+  func getSetupModel(wallet: Wallet) async -> WalletBalanceSetupModel? {
+    guard wallet.isRegular else { return nil }
+    
     let didBackup = wallet.setupSettings.backupDate != nil
-    let didFinishSetup = setupStore.isSetupFinished
-    let isBiometryEnabled = securityStore.isBiometryEnabled
+    let didFinishSetup = await setupStore.isSetupFinished
+    let isBiometryEnabled = await securityStore.isBiometryEnabled
     let isFinishSetupAvailable = didBackup
     
+    if (didBackup && didFinishSetup) {
+      return nil
+    }
+
     let model = WalletBalanceSetupModel(
       didBackup: didBackup,
       biometry: WalletBalanceSetupModel.Biometry(
@@ -169,73 +267,6 @@ private extension WalletBalanceController {
       ),
       isFinishSetupAvailable: isFinishSetupAvailable
     )
-
-    didUpdateFinishSetup?(model)
-  }
-}
-
-extension WalletBalanceController: BalanceStoreObserver {
-  func didGetBalanceStoreEvent(_ event: BalanceStore.Event) {
-    didReceiveBalanceUpdateEvent(event)
-  }
-}
-
-extension WalletBalanceController: RatesStoreObserver {
-  func didGetRatesStoreEvent(_ event: RatesStore.Event) {
-    switch event {
-    case .updateRates:
-      didReceiveRatesUpdateEvent()
-    }
-  }
-}
-
-extension WalletBalanceController: CurrencyStoreObserver {
-  func didGetCurrencyStoreEvent(_ event: CurrencyStoreEvent) {
-    updateBalance()
-  }
-}
-
-extension WalletBalanceController: WalletsStoreObserver {
-  func didGetWalletsStoreEvent(_ event: WalletsStoreEvent) {
-    switch event {
-    case .didUpdateWalletBackupState(let wallet):
-      self.wallet = wallet
-      updateFinishSetup()
-    default:
-      break
-    }
-  }
-}
-
-extension WalletBalanceController: SetupStoreObserver {
-  func didGetSetupStoreEvent(_ event: SetupStoreEvent) {
-    updateFinishSetup()
-  }
-}
-
-extension WalletBalanceController: SecurityStoreObserver {
-  func didGetSecurityStoreEvent(_ event: SecurityStoreEvent) {
-    updateFinishSetup()
-  }
-}
-
-extension WalletBalanceController: BackgroundUpdateStoreObserver {
-  public func didGetBackgroundUpdateStoreEvent(_ event: BackgroundUpdateStore.Event) {
-    switch event {
-    case .didUpdateState(let state):
-      didUpdateBackgroundUpdateState?(state)
-    case .didReceiveUpdateEvent:
-      break
-    }
-  }
-}
-
-extension WalletBalanceController: TotalBalanceStoreObserver {
-  func didGetTotalBalanceStoreEvent(_ event: TotalBalanceStore.Event) {
-    switch event {
-    case .didUpdateTotalBalance(let wallet, _):
-      guard wallet == self.wallet else { return }
-      didUpdateTotalBalance?()
-    }
+    return model
   }
 }
