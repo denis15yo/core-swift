@@ -54,18 +54,14 @@ final class TotalBalanceServiceImplementation: TotalBalanceService {
     
     // Jettons
     for jettonBalance in balance.jettonsBalance {
-      guard let jettonRates = rates.jettonsRates
-        .first(where: { $0.jettonInfo == jettonBalance.item.jettonInfo })?
-        .rates
-        .first(where: { $0.currency == currency })
-         else {
+      guard let rate = jettonBalance.rates.first(where: { $0.key == currency })?.value else {
         continue
       }
       
       let converted = rateConverter.convert(
         amount: jettonBalance.quantity,
         amountFractionLength: jettonBalance.item.jettonInfo.fractionDigits,
-        rate: jettonRates
+        rate: rate
       )
       items.append(Item(amount: converted.amount, fractionDigits: converted.fractionLength))
       maximumFractionDigits = max(converted.fractionLength, maximumFractionDigits)
@@ -83,6 +79,6 @@ final class TotalBalanceServiceImplementation: TotalBalanceService {
       }
     }
     
-    return TotalBalance(amount: totalSum, fractionalDigits: maximumFractionDigits)
+    return TotalBalance(amount: totalSum, fractionalDigits: maximumFractionDigits, date: Date())
   }
 }

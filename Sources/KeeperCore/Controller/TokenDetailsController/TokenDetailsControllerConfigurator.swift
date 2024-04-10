@@ -2,7 +2,7 @@ import Foundation
 import BigInt
 
 protocol TokenDetailsControllerConfigurator {
-  func getTokenModel(balance: Balance, rates: Rates, currency: Currency) -> TokenDetailsController.TokenModel
+  func getTokenModel(balance: Balance, tonRates: [Rates.Rate], currency: Currency) -> TokenDetailsController.TokenModel
 }
 
 struct TonTokenDetailsControllerConfigurator: TokenDetailsControllerConfigurator {
@@ -12,13 +12,12 @@ struct TonTokenDetailsControllerConfigurator: TokenDetailsControllerConfigurator
     self.mapper = mapper
   }
   
-  func getTokenModel(balance: Balance, rates: Rates, currency: Currency) -> TokenDetailsController.TokenModel {
+  func getTokenModel(balance: Balance, tonRates: [Rates.Rate], currency: Currency) -> TokenDetailsController.TokenModel {
     let amount = mapper.mapTonBalance(
       amount: balance.tonBalance.amount,
-      tonRates: rates.ton,
+      tonRates: tonRates,
       currency: currency
     )
-    
     return TokenDetailsController.TokenModel(
       tokenTitle: TonInfo.name,
       tokenSubtitle: nil,
@@ -41,7 +40,7 @@ struct JettonTokenDetailsControllerConfigurator: TokenDetailsControllerConfigura
     self.mapper = mapper
   }
   
-  func getTokenModel(balance: Balance, rates: Rates, currency: Currency) -> TokenDetailsController.TokenModel {
+  func getTokenModel(balance: Balance, tonRates: [Rates.Rate], currency: Currency) -> TokenDetailsController.TokenModel {
     let subtitle: String?
     switch jettonItem.jettonInfo.verification {
     case .whitelist:
@@ -52,26 +51,20 @@ struct JettonTokenDetailsControllerConfigurator: TokenDetailsControllerConfigura
       subtitle = "Unverified Token"
     }
     
-    var jettonAmount: BigUInt = 0
+    let tokenAmount: String
+    var convertedAmount: String?
     if let jettonBalance = balance.jettonsBalance.first(where: { $0.item.jettonInfo == jettonItem.jettonInfo }) {
-      jettonAmount = jettonBalance.quantity
+     (tokenAmount, convertedAmount) = mapper.mapJettonBalance(jettonBalance: jettonBalance, currency: currency)
+    } else {
+      tokenAmount = "0"
+      convertedAmount = nil
     }
-    
-    let jettonRates = rates.jettonsRates.first(where: { $0.jettonInfo == jettonItem.jettonInfo })?.rates ?? []
-    
-    let amount = mapper.mapJettonBalance(
-      jettonInfo: jettonItem.jettonInfo,
-      jettonAmount: jettonAmount,
-      rates: jettonRates,
-      currency: currency
-    )
-    
     return TokenDetailsController.TokenModel(
       tokenTitle: jettonItem.jettonInfo.name,
       tokenSubtitle: subtitle,
       image: .url(jettonItem.jettonInfo.imageURL),
-      tokenAmount: amount.tokenAmount,
-      convertedAmount: amount.convertedAmount,
+      tokenAmount: tokenAmount,
+      convertedAmount: convertedAmount,
       buttons: [.send(.jetton(jettonItem)), .receive(.jetton(jettonItem))]
     )
   }

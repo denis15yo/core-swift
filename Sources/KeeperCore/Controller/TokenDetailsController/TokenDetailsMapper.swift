@@ -40,22 +40,20 @@ struct TokenDetailsMapper {
     return (amount, convertedAmount)
   }
   
-  func mapJettonBalance(jettonInfo: JettonInfo,
-                        jettonAmount: BigUInt,
-                        rates: [Rates.Rate],
+  func mapJettonBalance(jettonBalance: JettonBalance,
                         currency: Currency) -> (tokenAmount: String, convertedAmount: String?) {
     let amount = amountFormatter.formatAmount(
-      jettonAmount,
-      fractionDigits: jettonInfo.fractionDigits,
-      maximumFractionDigits: jettonInfo.fractionDigits,
-      symbol: jettonInfo.symbol
+      jettonBalance.quantity,
+      fractionDigits: jettonBalance.item.jettonInfo.fractionDigits,
+      maximumFractionDigits: jettonBalance.item.jettonInfo.fractionDigits,
+      symbol: jettonBalance.item.jettonInfo.symbol
     )
     
     var convertedAmount: String?
-    if let rate = rates.first(where: { $0.currency == currency }) {
+    if let rate = jettonBalance.rates[currency] {
       let converted = rateConverter.convert(
-        amount: jettonAmount,
-        amountFractionLength: jettonInfo.fractionDigits,
+        amount: jettonBalance.quantity,
+        amountFractionLength: jettonBalance.item.jettonInfo.fractionDigits,
         rate: rate
       )
       convertedAmount = amountFormatter.formatAmount(
