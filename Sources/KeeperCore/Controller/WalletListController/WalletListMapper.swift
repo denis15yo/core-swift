@@ -16,10 +16,12 @@ struct WalletListMapper {
   }
   
   func mapWalletModel(wallet: Wallet,
-                      balance: String) -> WalletListController.ListModel {
-    return WalletListController.ListModel(
-      walletModel: wallet.model,
-      balance: balance
+                      balance: String) -> WalletListController.ItemModel {
+    let walletModel = wallet.model
+    return WalletListController.ItemModel(
+      id: walletModel.identifier,
+      walletModel: walletModel,
+      totalBalance: balance
     )
   }
   

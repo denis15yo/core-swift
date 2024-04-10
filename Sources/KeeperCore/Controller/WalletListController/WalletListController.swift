@@ -1,130 +1,185 @@
 import Foundation
 import CoreComponents
+import TonSwift
 
 public final class WalletListController {
-  
-  public struct ListModel: Equatable {
-    public var identifier: String {
-      walletModel.identifier
+  actor State {
+    var wallets = [Wallet]()
+    var selectedWallet: Wallet?
+    var totalBalanceStates = [Wallet: TotalBalanceState]()
+    
+    func setWallets(_ wallets: [Wallet]) {
+      self.wallets = wallets
     }
+    
+    func setTotalBalanceState(_ totalBalanceState: TotalBalanceState, 
+                              wallet: Wallet) {
+      totalBalanceStates[wallet] = totalBalanceState
+    }
+    
+    func setSelectedWallet(_ wallet: Wallet?) {
+      selectedWallet = wallet
+    }
+  }
+  
+  public struct Model {
+    public let items: [ItemModel]
+    public let selectedIndex: Int?
+    public let isEditable: Bool
+    
+    public init(items: [ItemModel], selectedIndex: Int?, isEditable: Bool) {
+      self.items = items
+      self.selectedIndex = selectedIndex
+      self.isEditable = isEditable
+    }
+  }
+  
+  public struct ItemModel {
+    public let id: String
     public let walletModel: WalletModel
-    public let balance: String
+    public let totalBalance: String
   }
   
-  public var didUpdateWallets: (() -> Void)?
-  public var didUpdateActiveWallet: (() -> Void)?
+  public var didUpdateState: ((Model) -> Void)?
   
-  private var _walletsModels = [ListModel]()
-  public private(set) var walletsModels: [ListModel] {
-    get { _walletsModels }
-    set {
-      guard _walletsModels != newValue else { return }
-      _walletsModels = newValue
-      didUpdateWallets?()
-    }
-  }
-  public var activeWalletIndex: Int? {
-    getActiveWalletIndex()
-  }
-  public var isEditable: Bool {
-    configurator.isEditable
-  }
-
-  private let configurator: WalletListControllerConfigurator
-  private let totalBalanceStore: TotalBalanceStore
-  private let ratesStore: RatesStore
+  private let state = State()
+  
+  private let walletsStore: WalletsStore
+  private let walletTotalBalanceStore: WalletTotalBalanceStore
   private let currencyStore: CurrencyStore
+  private let configurator: WalletListControllerConfigurator
   private let walletListMapper: WalletListMapper
   
-  init(configurator: WalletListControllerConfigurator,
-       totalBalanceStore: TotalBalanceStore,
-       ratesStore: RatesStore,
+  init(walletsStore: WalletsStore, 
+       walletTotalBalanceStore: WalletTotalBalanceStore,
        currencyStore: CurrencyStore,
+       configurator: WalletListControllerConfigurator,
        walletListMapper: WalletListMapper) {
-    self.configurator = configurator
-    self.totalBalanceStore = totalBalanceStore
-    self.ratesStore = ratesStore
+    self.walletsStore = walletsStore
+    self.walletTotalBalanceStore = walletTotalBalanceStore
     self.currencyStore = currencyStore
+    self.configurator = configurator
     self.walletListMapper = walletListMapper
-    
-    configurator.didUpdateWallets = { [weak self] in
-      guard let self else { return }
-        self.walletsModels = self.getWalletsModels()
-    }
-    
-    configurator.didUpdateSelectedWallet = { [weak self] in
-      self?.didUpdateActiveWallet?()
-    }
-    
-    totalBalanceStore.addObserver(self)
-    
-    walletsModels = getWalletsModels()
-    
-    Task {
-      await ratesStore.addObserver(self)
-    }
   }
   
-  public func setWalletActive(with identifier: String) {
-    guard let index = _walletsModels.firstIndex(where: { $0.identifier == identifier }) else { return }
+  public func start() async {
+    await startObservations()
+    await setInitialState()
+  }
+  
+  public func selectWallet(identifier: String) async {
+    guard let index = await state.wallets.firstIndex(where: { $0.id == identifier }) else { return }
     configurator.selectWallet(at: index)
   }
   
-  public func moveWallet(fromIndex: Int, toIndex: Int) {
-    let previousModels = _walletsModels
-    let model = _walletsModels.remove(at: fromIndex)
-    _walletsModels.insert(model, at: toIndex)
+  public func moveWallet(from: Int, to: Int) async {
     do {
-      try configurator.moveWallet(fromIndex: fromIndex, toIndex: toIndex)
+      try configurator.moveWallet(fromIndex: from, toIndex: to)
     } catch {
-      walletsModels = previousModels
+      await didUpdateState()
     }
+  }
+  
+  public func getWallet(at index: Int) async -> Wallet? {
+    let wallets = await state.wallets
+    guard index < wallets.count else { return nil }
+    return wallets[index]
   }
 }
 
 private extension WalletListController {
-  func getWalletsModels() -> [ListModel] {
-    var models = [ListModel]()
-    for wallet in configurator.getWallets() {
-      models.append(mapWalletModel(wallet: wallet))
+  func startObservations() async {
+    _ = await walletTotalBalanceStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .didUpdateTotalBalance(let totalBalanceState, let walletAddress):
+        Task { await observer.didUpdateTotalBalanceState(totalBalanceState,
+                                                         walletAddress: walletAddress)
+        }
+      }
     }
-    return models
+
+    configurator.didUpdateWallets = { [weak self] in
+      guard let self else { return }
+      Task {
+        await self.didUpdateWalletsOrder()
+      }
+    }
   }
   
-  func getActiveWalletIndex() -> Int? {
-    configurator.getSelectedWalletIndex()
+  func setInitialState() async {
+    let wallets = configurator.getWallets()
+    await state.setWallets(wallets)
+    await state.setSelectedWallet(configurator.getSelectedWallet())
+    await didUpdateState()
+    for wallet in wallets {
+      do {
+        if let walletTotalBalanceState = try await walletTotalBalanceStore.getTotalBalanceState(
+          walletAddress: wallet.address
+        ) {
+          await state.setTotalBalanceState(
+            walletTotalBalanceState,
+            wallet: wallet
+          )
+        }
+      } catch {
+        continue
+      }
+    }
+    await didUpdateState()
   }
   
-  func mapWalletModel(wallet: Wallet) -> ListModel {
-    let totalBalance = totalBalanceStore.getTotalBalance(wallet: wallet, currency: .USD)
-    let balanceString = walletListMapper.mapTotalBalance(totalBalance, currency: .USD)
-    let model = walletListMapper.mapWalletModel(
-      wallet: wallet,
-      balance: balanceString
+  func didUpdateTotalBalanceState(_ totalBalanceState: TotalBalanceState,
+                                  walletAddress: TonSwift.Address) async {
+    let wallets = await state.wallets
+      .filter {
+        guard let address = try? $0.address else { return false }
+        return address == walletAddress
+      }
+    for wallet in wallets {
+      await state.setTotalBalanceState(totalBalanceState, wallet: wallet)
+    }
+    await didUpdateState()
+  }
+  
+  func didUpdateWalletsOrder() async {
+    await setInitialState()
+  }
+  
+  func didUpdateState() async {
+    let itemsModels = await getItemModels()
+    
+    let selectedIndex: Int?
+    if let selectedWallet = await state.selectedWallet {
+      selectedIndex = await state.wallets.firstIndex(of: selectedWallet)
+    } else {
+      selectedIndex = nil
+    }
+    
+    let model = Model(
+      items: itemsModels,
+      selectedIndex: selectedIndex,
+      isEditable: itemsModels.count > 1 && configurator.isEditable
     )
-    return model
+    didUpdateState?(model)
   }
-}
-
-extension WalletListController: RatesStoreObserver {
-  func didGetRatesStoreEvent(_ event: RatesStore.Event) {
-    switch event {
-    case .updateRates:
-      Task {
-        walletsModels = getWalletsModels()
+  
+  func getItemModels() async -> [ItemModel] {
+    let currency = await currencyStore.activeCurrency
+    let wallets = await state.wallets
+    let totalBalanceStates = await state.totalBalanceStates
+    let itemModels = wallets.map { wallet in
+      var balance = ""
+      if let walletTotalBalance = totalBalanceStates[wallet] {
+        balance = walletListMapper.mapTotalBalance(
+          walletTotalBalance.totalBalance,
+          currency: currency
+        )
       }
+      return walletListMapper.mapWalletModel(
+        wallet: wallet,
+        balance: balance
+      )
     }
+    return itemModels
   }
 }
-
-extension WalletListController: TotalBalanceStoreObserver {
-  func didGetTotalBalanceStoreEvent(_ event: TotalBalanceStore.Event) {
-    switch event {
-    case .didUpdateTotalBalance:
-      Task {
-        walletsModels = getWalletsModels()
-      }
-    }
-  }
-}
-

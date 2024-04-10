@@ -7,9 +7,14 @@ protocol WalletListControllerConfigurator: AnyObject {
   var isEditable: Bool { get }
   
   func getWallets() -> [Wallet]
+  func getSelectedWallet() -> Wallet?
   func getSelectedWalletIndex() -> Int?
   func selectWallet(at index: Int)
   func moveWallet(fromIndex: Int, toIndex: Int) throws
+}
+
+extension WalletListControllerConfigurator {
+  func getSelectedWallet() -> Wallet? { return nil }
 }
 
 final class WalletStoreWalletListControllerConfigurator: WalletListControllerConfigurator {
@@ -18,11 +23,15 @@ final class WalletStoreWalletListControllerConfigurator: WalletListControllerCon
   var didUpdateSelectedWallet: (() -> Void)?
   
   var isEditable: Bool {
-    walletsStore.wallets.count > 1
+    true
   }
   
   func getWallets() -> [Wallet] {
     walletsStore.wallets
+  }
+  
+  func getSelectedWallet() -> Wallet? {
+    walletsStore.activeWallet
   }
   
   func getSelectedWalletIndex() -> Int? {
@@ -49,21 +58,19 @@ final class WalletStoreWalletListControllerConfigurator: WalletListControllerCon
     self.walletsStore = walletsStore
     self.walletsStoreUpdate = walletsStoreUpdate
     
-    walletsStore.addObserver(self)
-  }
-}
-
-extension WalletStoreWalletListControllerConfigurator: WalletsStoreObserver {
-  func didGetWalletsStoreEvent(_ event: WalletsStoreEvent) {
-    switch event {
-    case .didUpdateActiveWallet:
-      didUpdateSelectedWallet?()
-    case .didUpdateWalletsOrder:
-      didUpdateWallets?()
-    case .didAddWallets:
-      didUpdateWallets?()
-    default:
-      break
+    _ = walletsStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .didUpdateActiveWallet:
+        observer.didUpdateSelectedWallet?()
+      case .didUpdateWalletsOrder:
+        observer.didUpdateWallets?()
+      case .didAddWallets:
+        observer.didUpdateWallets?()
+      case .didUpdateWalletMetadata:
+        observer.didUpdateWallets?()
+      default:
+        break
+      }
     }
   }
 }
@@ -90,7 +97,9 @@ final class WalletSelectWalletListControllerConfigurator: WalletListControllerCo
   func selectWallet(at index: Int) {
     guard index < walletsStore.wallets.count else { return }
     let selectedWallet = walletsStore.wallets[index]
-    didSelectWallet?(selectedWallet)
+    Task { @MainActor in
+      didSelectWallet?(selectedWallet)
+    }
   }
   
   func moveWallet(fromIndex: Int, toIndex: Int) throws {}
@@ -102,21 +111,17 @@ final class WalletSelectWalletListControllerConfigurator: WalletListControllerCo
     self.selectedWallet = selectedWallet
     self.walletsStore = walletsStore
     
-    walletsStore.addObserver(self)
-  }
-}
-
-extension WalletSelectWalletListControllerConfigurator: WalletsStoreObserver {
-  func didGetWalletsStoreEvent(_ event: WalletsStoreEvent) {
-    switch event {
-    case .didAddWallets:
-      didUpdateWallets?()
-    case .didUpdateWalletsOrder:
-      didUpdateWallets?()
-    case .didUpdateActiveWallet:
-      didUpdateSelectedWallet?()
-    default:
-      break
+    _ = walletsStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .didUpdateWalletsOrder:
+        observer.didUpdateWallets?()
+      case .didAddWallets:
+        observer.didUpdateWallets?()
+      case .didUpdateWalletMetadata:
+        observer.didUpdateWallets?()
+      default:
+        break
+      }
     }
   }
 }

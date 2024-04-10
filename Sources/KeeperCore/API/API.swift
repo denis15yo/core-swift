@@ -21,22 +21,35 @@ extension API {
     return try Account(account: try response.ok.body.json)
   }
   
-  func getAccountJettonsBalances(address: Address) async throws -> [JettonBalance] {
+  func getAccountJettonsBalances(address: Address, currencies: [Currency]) async throws -> [JettonBalance] {
+    let currenciesString = currencies.map { $0.code }.joined(separator: ",")
     let response = try await tonAPIClient
-      .getAccountJettonsBalances(path: .init(account_id: address.toRaw()))
+      .getAccountJettonsBalances(path: .init(account_id: address.toRaw()), query: .init(currencies: currenciesString))
     return try response.ok.body.json.balances
       .compactMap { jetton in
         do {
           let quantity = BigUInt(stringLiteral: jetton.balance)
           let walletAddress = try Address.parse(jetton.wallet_address.address)
+          let rates = mapJettonRates(rates: jetton.price)
           let jettonInfo = try JettonInfo(jettonPreview: jetton.jetton)
           let jettonItem = JettonItem(jettonInfo: jettonInfo, walletAddress: walletAddress)
-          let jettonBalance = JettonBalance(item: jettonItem, quantity: quantity)
+          let jettonBalance = JettonBalance(item: jettonItem, quantity: quantity, rates: rates)
           return jettonBalance
         } catch {
           return nil
         }
       }
+  }
+  
+  private func mapJettonRates(rates: Components.Schemas.TokenRates?) -> [Currency: Rates.Rate] {
+    var result = [Currency: Rates.Rate]()
+    rates?.prices?.additionalProperties.forEach { currencyCode, value in
+      guard let currency = Currency(code: currencyCode) else { return }
+      let rate = Decimal(value)
+      let diff24h = rates?.diff_24h?.additionalProperties.first(where: { $0.key == currencyCode })?.value
+      result[currency] = Rates.Rate(currency: currency, rate: rate, diff24h: diff24h)
+    }
+    return result
   }
 }
 
