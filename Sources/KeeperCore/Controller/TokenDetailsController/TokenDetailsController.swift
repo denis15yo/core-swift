@@ -59,7 +59,7 @@ private extension TokenDetailsController {
   
   func setInitialState() async {
     let tonRates = await tonRatesStore.getTonRates()
-    let currency = await currencyStore.activeCurrency
+    let currency = await currencyStore.getActiveCurrency()
     let balance = await getBalance()
     let model = configurator.getTokenModel(
       balance: balance,
@@ -71,7 +71,7 @@ private extension TokenDetailsController {
   
   func didUpdateBalanceState(balanceState: WalletBalanceState, address: Address) async {
     let tonRates = await tonRatesStore.getTonRates()
-    let currency = await currencyStore.activeCurrency
+    let currency = await currencyStore.getActiveCurrency()
     let model = configurator.getTokenModel(
       balance: balanceState.walletBalance.balance,
       tonRates: tonRates,
@@ -81,7 +81,7 @@ private extension TokenDetailsController {
   }
   
   func didUpdateTonRates(_ tonRates: [Rates.Rate]) async {
-    let currency = await currencyStore.activeCurrency
+    let currency = await currencyStore.getActiveCurrency()
     let balance = await getBalance()
     let model = configurator.getTokenModel(balance: balance, tonRates: tonRates, currency: currency)
     didUpdate?(model)

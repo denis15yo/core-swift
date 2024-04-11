@@ -4,7 +4,7 @@ import BigInt
 
 public final class TonConnectConfirmationController {
   public struct Model {
-    public let event: HistoryListEvent
+    public let event: HistoryEvent
     public let fee: String
     public let walletName: String
   }
@@ -72,7 +72,7 @@ private extension TonConnectConfirmationController {
       parameters: appRequestParam
     )
     
-    let currency = currencyStore.getActiveCurrency()
+    let currency = await currencyStore.getActiveCurrency()
     let rates = ratesStore.getRates(jettons: []).ton.first(where: { $0.currency == currency })
     let transactionInfo = try await sendService.loadTransactionInfo(boc: boc)
     let event = try AccountEvent(accountEvent: transactionInfo.event)

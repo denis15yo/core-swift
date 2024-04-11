@@ -18,14 +18,17 @@ final class ActiveWalletsServiceImplementation: ActiveWalletsService {
   private let api: API
   private let jettonsBalanceService: JettonBalanceService
   private let accountNFTService: AccountNFTService
+  private let currencyService: CurrencyService
   
   
   init(api: API,
        jettonsBalanceService: JettonBalanceService,
-       accountNFTService: AccountNFTService) {
+       accountNFTService: AccountNFTService,
+       currencyService: CurrencyService) {
     self.api = api
     self.jettonsBalanceService = jettonsBalanceService
     self.accountNFTService = accountNFTService
+    self.currencyService = currencyService
   }
   
   func loadActiveWallets(mnemonic: CoreComponents.Mnemonic) async throws -> [ActiveWalletModel] {
@@ -34,7 +37,7 @@ final class ActiveWalletsServiceImplementation: ActiveWalletsService {
     )
     let revisions = WalletContractVersion.allCases
     
-    let models = try await withThrowingTaskGroup(of: ActiveWalletModel.self, returning: [ActiveWalletModel].self) { taskGroup in
+    let models = try await withThrowingTaskGroup(of: ActiveWalletModel.self, returning: [ActiveWalletModel].self) { [currencyService] taskGroup in
       for revision in revisions {
         let address = try createAddress(
           publicKey: keyPair.publicKey,
@@ -42,7 +45,7 @@ final class ActiveWalletsServiceImplementation: ActiveWalletsService {
         )
         taskGroup.addTask {
           async let accountTask = self.api.getAccountInfo(address: address.toRaw())
-          async let jettonsBalanceTask = self.jettonsBalanceService.loadJettonsBalance(address: address)
+          async let jettonsBalanceTask = self.jettonsBalanceService.loadJettonsBalance(address: address, currency: (try? currencyService.getActiveCurrency()) ?? .USD )
           async let nftsTask = self.accountNFTService.loadAccountNFTs(accountAddress: address, collectionAddress: nil, limit: 5, offset: 0, isIndirectOwnership: true)
           
           let isActive: Bool

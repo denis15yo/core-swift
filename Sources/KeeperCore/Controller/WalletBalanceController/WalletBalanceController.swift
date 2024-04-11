@@ -204,7 +204,7 @@ private extension WalletBalanceController {
   func getStateModel() async -> StateModel {
     let formattedTotalBalance: String
     let stateDate: String?
-    let currency = await currencyStore.activeCurrency
+    let currency = await currencyStore.getActiveCurrency()
     switch await state.totalBalanceState {
     case .none:
       formattedTotalBalance = "-"
@@ -236,7 +236,7 @@ private extension WalletBalanceController {
     }
 
     let rates = await tonRatesStore.getTonRates()
-    let currency = await currencyStore.activeCurrency
+    let currency = await currencyStore.getActiveCurrency()
     return walletBalanceMapper.mapBalance(
       balance: balance,
       rates: Rates(

@@ -95,12 +95,12 @@ private extension WalletMainController {
   
   func didReceiveBackgroundUpdateEvent(_ backgroundUpdateEvent: BackgroundUpdateEvent) async {
     try? await Task.sleep(nanoseconds: 1_000_000_000)
-    let currency = await currencyStore.activeCurrency
+    let currency = await currencyStore.getActiveCurrency()
     await loadWalletsBalances(addresses: [backgroundUpdateEvent.accountAddress], currency: currency)
   }
   
   func reload() async {
-    let currency = await currencyStore.activeCurrency
+    let currency = await currencyStore.getActiveCurrency()
     Task { await loadWalletsBalances(wallets: walletsStore.wallets, currency: currency) }
     Task { await loadTonRates(currency: currency) }
   }

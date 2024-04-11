@@ -5,6 +5,9 @@ public final class SettingsController {
   public var didUpdateActiveWallet: (() -> Void)?
   public var didUpdateActiveCurrency: (() -> Void)?
   
+  private var walletsStoreToken: ObservationToken?
+  private var currencyStoreToken: ObservationToken?
+  
   private let walletsStore: WalletsStore
   private let currencyStore: CurrencyStore
   private let configurationStore: ConfigurationStore
@@ -15,8 +18,14 @@ public final class SettingsController {
     self.walletsStore = walletsStore
     self.currencyStore = currencyStore
     self.configurationStore = configurationStore
-    walletsStore.addObserver(self)
-    currencyStore.addObserver(self)
+    
+    walletsStoreToken = walletsStore.addEventObserver(self) { observer, event in
+      observer.didGetWalletsStoreEvent(event)
+    }
+    
+//    currencyStoreToken = currencyStore.addEventObserver(self) { observer, event in
+//      observer.didGetCurrencyStoreEvent(event)
+//    }
   }
   
   public func activeWallet() -> Wallet {
@@ -28,16 +37,16 @@ public final class SettingsController {
     return wallet.model
   }
   
-  public func activeCurrency() -> Currency {
-    currencyStore.getActiveCurrency()
+  public func activeCurrency() async -> Currency {
+    await currencyStore.getActiveCurrency()
   }
   
   public func getAvailableCurrencies() -> [Currency] {
     Currency.allCases
   }
   
-  public func setCurrency(_ currency: Currency) {
-    currencyStore.setActiveCurrency(currency)
+  public func setCurrency(_ currency: Currency) async {
+    await currencyStore.setActiveCurrency(currency)
   }
   
   public var supportURL: URL? {
@@ -62,8 +71,8 @@ public final class SettingsController {
   }
 }
 
-extension SettingsController: WalletsStoreObserver {
-  func didGetWalletsStoreEvent(_ event: WalletsStoreEvent) {
+private extension SettingsController {
+  func didGetWalletsStoreEvent(_ event: WalletsStore.Event) {
     switch event {
     case .didUpdateWalletMetadata(let wallet):
       guard wallet == walletsStore.activeWallet else { return }
@@ -72,10 +81,8 @@ extension SettingsController: WalletsStoreObserver {
       break
     }
   }
-}
-
-extension SettingsController: CurrencyStoreObserver {
-  func didGetCurrencyStoreEvent(_ event: CurrencyStoreEvent) {
+  
+  func didGetCurrencyStoreEvent(_ event: CurrencyStore.Event) {
     didUpdateActiveCurrency?()
   }
 }

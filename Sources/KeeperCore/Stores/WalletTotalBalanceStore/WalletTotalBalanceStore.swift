@@ -41,7 +41,7 @@ actor WalletTotalBalanceStore {
   }
   
   func getTotalBalanceState(walletAddress: Address) async throws -> TotalBalanceState? {
-    let activeCurrency = await currencyStore.activeCurrency
+    let activeCurrency = await currencyStore.getActiveCurrency()
     if let totalBalanceState = totalBalanceStates[activeCurrency]?[walletAddress] {
       return totalBalanceState
     } else {
@@ -133,7 +133,7 @@ private extension WalletTotalBalanceStore {
   func updateTotalBalance(walletBalanceState: WalletBalanceState,
                           walletAddress: Address,
                           tonRates: [Rates.Rate]) async {
-    let currency = await currencyStore.activeCurrency
+    let currency = await currencyStore.getActiveCurrency()
     let totalBalanceState = calculateTotalBalanceState(
       walletBalanceState: walletBalanceState,
       currency: currency,

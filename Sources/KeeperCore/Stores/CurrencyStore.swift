@@ -12,21 +12,20 @@ actor CurrencyStore {
     self.currencyService = currencyService
   }
   
-  var activeCurrency: Currency {
-    get {
-      do {
-        return try currencyService.getActiveCurrency()
-      } catch {
-        return .USD
-      }
-    }
-    set {
-      do {
-        try currencyService.setActiveCurrency(newValue)
-        observations
-          .values
-          .forEach { $0(.didChangeCurrency(currency: newValue)) }
-      } catch {}
+  func setActiveCurrency(_ currency: Currency) {
+    do {
+      try currencyService.setActiveCurrency(currency)
+      observations
+        .values
+        .forEach { $0(.didChangeCurrency(currency: currency)) }
+    } catch {}
+  }
+  
+  func getActiveCurrency() -> Currency {
+    do {
+      return try currencyService.getActiveCurrency()
+    } catch {
+      return .USD
     }
   }
   

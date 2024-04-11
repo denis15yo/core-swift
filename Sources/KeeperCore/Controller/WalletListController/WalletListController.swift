@@ -164,7 +164,7 @@ private extension WalletListController {
   }
   
   func getItemModels() async -> [ItemModel] {
-    let currency = await currencyStore.activeCurrency
+    let currency = await currencyStore.getActiveCurrency()
     let wallets = await state.wallets
     let totalBalanceStates = await state.totalBalanceStates
     let itemModels = wallets.map { wallet in
