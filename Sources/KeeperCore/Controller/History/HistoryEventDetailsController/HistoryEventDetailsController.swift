@@ -63,7 +63,7 @@ public final class HistoryEventDetailsController {
   
   private let event: AccountEventDetailsEvent
   private let amountMapper: HistoryListEventAmountMapper
-  private let ratesStore: RatesStore
+  private let tonRatesStore: TonRatesStore
   private let walletsStore: WalletsStore
   private let currencyStore: CurrencyStore
   private let nftService: NFTService
@@ -78,13 +78,13 @@ public final class HistoryEventDetailsController {
   
   init(event: AccountEventDetailsEvent,
        amountMapper: HistoryListEventAmountMapper,
-       ratesStore: RatesStore,
+       tonRatesStore: TonRatesStore,
        walletsStore: WalletsStore,
        currencyStore: CurrencyStore,
        nftService: NFTService) {
     self.event = event
     self.amountMapper = amountMapper
-    self.ratesStore = ratesStore
+    self.tonRatesStore = tonRatesStore
     self.walletsStore = walletsStore
     self.currencyStore = currencyStore
     self.nftService = nftService
@@ -887,8 +887,8 @@ private extension HistoryEventDetailsController {
   }
   
   func tonFiatString(amount: BigUInt) async -> String? {
-    let currency = currencyStore.getActiveCurrency()
-    guard let tonRate = await ratesStore.getRates(jettons: []).ton.first(where: { $0.currency == currency }) else {
+    let currency = await currencyStore.activeCurrency
+    guard let tonRate = await tonRatesStore.getTonRates().first(where: { $0.currency == currency }) else {
       return nil
     }
     
@@ -906,26 +906,7 @@ private extension HistoryEventDetailsController {
   }
   
   func jettonFiatString(amount: BigUInt, jettonInfo: JettonInfo) async -> String? {
-    let currency = currencyStore.getActiveCurrency()
-    guard let jettonRate = await ratesStore.getRates(jettons: [jettonInfo])
-      .jettonsRates
-      .first(where: { $0.jettonInfo == jettonInfo })?
-      .rates
-      .first(where: { $0.currency == currency }) else {
-      return nil
-    }
-    
-    let fiat = rateConverter.convert(
-      amount: amount,
-      amountFractionLength: jettonInfo.fractionDigits,
-      rate: jettonRate
-    )
-    return amountMapper.mapAmount(
-      amount: fiat.amount,
-      fractionDigits: fiat.fractionLength,
-      maximumFractionDigits: 2,
-      type: .none,
-      currency: currency)
+    return nil
   }
 }
 
