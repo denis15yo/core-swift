@@ -5,7 +5,7 @@ public final class ChartController {
   public var didUpdateChartData: (() -> Void)?
   
   private let chartService: ChartService
-  private let ratesStore: RatesStore
+  private let tonRatesStore: TonRatesStore
   private let currencyStore: CurrencyStore
   private let decimalAmountFormatter: DecimalAmountFormatter
   private let dateFormatter = DateFormatter()
@@ -14,31 +14,40 @@ public final class ChartController {
   public private(set) var coordinates = [Coordinate]()
   
   init(chartService: ChartService,
-       ratesStore: RatesStore,
+       tonRatesStore: TonRatesStore,
        currencyStore: CurrencyStore,
        decimalAmountFormatter: DecimalAmountFormatter) {
     self.chartService = chartService
-    self.ratesStore = ratesStore
+    self.tonRatesStore = tonRatesStore
     self.currencyStore = currencyStore
     self.decimalAmountFormatter = decimalAmountFormatter
   }
   
+  public func start() async {
+    _ = await tonRatesStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .didUpdateRates:
+        observer.didUpdateChartData?()
+      }
+    }
+  }
+  
   public func getChartData(period: Period) async throws -> [Coordinate] {
     loadChartDataTask?.cancel()
-    let currency = currencyStore.getActiveCurrency()
+    let currency = await currencyStore.getActiveCurrency()
     let task = Task {
       async let coordinatesTask = self.chartService.loadChartData(
         period: period,
         token: "ton",
         currency: currency)
-      let rates = await ratesStore.getRates(jettons: [])
+      let rates = await tonRatesStore.getTonRates()
       let coordinates = try await coordinatesTask
       
       try Task.checkCancellation()
       loadChartDataTask = nil
       let converted = convertCoordinates(
         coordinates: coordinates,
-        rates: rates,
+        tonRates: rates,
         currency: currency
       )
       return converted
@@ -48,18 +57,20 @@ public final class ChartController {
     return self.coordinates
   }
   
-  public func getInformation(at index: Int, period: Period) -> ChartPointInformationModel {
+  public func getInformation(at index: Int, period: Period) async -> ChartPointInformationModel {
     guard index < coordinates.count else {
       return ChartPointInformationModel(
         amount: "",
         diff: .init(percent: "", fiat: "", direction: .none),
         date: "")
     }
-    let currency = currencyStore.getActiveCurrency()
+    let currency = await currencyStore.getActiveCurrency()
     let coordinate = coordinates[index]
     
     let percentageValue = calculatePercentageDiff(at: index)
     let fiatValue = calculateFiatDiff(percentage: percentageValue)
+    
+    let tonRates = await tonRatesStore.getTonRates()
     
     let amount = decimalAmountFormatter.format(
       amount: Decimal(coordinate.y),
@@ -139,27 +150,15 @@ private extension ChartController {
   
   // TODO: Remove once tonapi v2 chart request will fit requirements
   func convertCoordinates(coordinates: [Coordinate],
-                          rates: Rates,
+                          tonRates: [Rates.Rate],
                           currency: Currency) -> [Coordinate] {
-    guard let currencyRates = rates.ton.first(where: { $0.currency == currency }),
-          let usdRates = rates.ton.first(where: { $0.currency == .USD }) else {
+    guard let currencyRates = tonRates.first(where: { $0.currency == currency }),
+          let usdRates = tonRates.first(where: { $0.currency == .USD }) else {
       return coordinates
     }
     let coeff = NSDecimalNumber(decimal: usdRates.rate / currencyRates.rate).doubleValue
     return coordinates.map { coordinate in
       return .init(x: coordinate.x, y: coordinate.y / coeff)
     }
-  }
-}
-
-extension ChartController: RatesStoreObserver {
-  func didGetRatesStoreEvent(_ event: RatesStore.Event) {
-    didUpdateChartData?()
-  }
-}
-
-extension ChartController: CurrencyStoreObserver {
-  func didGetCurrencyStoreEvent(_ event: CurrencyStoreEvent) {
-    didUpdateChartData?()
   }
 }

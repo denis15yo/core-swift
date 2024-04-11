@@ -21,7 +21,7 @@ actor TonRatesLoader {
     
     let task = Task {
       let tonRates = try await ratesService
-        .loadRates(jettons:[], currencies: [currency]).ton
+        .loadRates(jettons:[], currencies: [currency, .USD, .TON]).ton
       
       guard !Task.isCancelled else { return }
       await tonRatesStore.setTonRates(tonRates)
