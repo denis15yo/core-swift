@@ -5,6 +5,9 @@ public final class HistoryController {
   public var didUpdateWallet: (() -> Void)?
   public var didUpdateIsConnecting: ((Bool) -> Void)?
   
+  private var walletsStoreObservationToken: ObservationToken?
+  private var backgroundUpdateStoreObservationToken: ObservationToken?
+  
   private let walletsStore: WalletsStore
   private let backgroundUpdateStore: BackgroundUpdateStore
   
@@ -12,10 +15,26 @@ public final class HistoryController {
        backgroundUpdateStore: BackgroundUpdateStore) {
     self.walletsStore = walletsStore
     self.backgroundUpdateStore = backgroundUpdateStore
-    walletsStore.addObserver(self)
+    
     Task {
-      await backgroundUpdateStore.addObserver(self)
+      walletsStoreObservationToken = walletsStore.addEventObserver(self) { observer, event in
+        observer.didGetWalletsStoreEvent(event)
+      }
+      
+      backgroundUpdateStoreObservationToken = await backgroundUpdateStore.addEventObserver(self) { observer, event in
+        switch event {
+        case .didUpdateState(let backgroundUpdateState):
+          observer.handleBackgroundUpdateState(backgroundUpdateState)
+        case .didReceiveUpdateEvent(let backgroundUpdateEvent):
+          break
+        }
+      }
     }
+  }
+  
+  deinit {
+    walletsStoreObservationToken?.cancel()
+    backgroundUpdateStoreObservationToken?.cancel()
   }
   
   public var wallet: Wallet {
@@ -23,15 +42,24 @@ public final class HistoryController {
   }
   
   public func updateConnectingState() {
-    Task {
-      let state = await backgroundUpdateStore.state
-      handleBackgroundUpdateState(state)
-    }
+//    Task {
+//      let state = await backgroundUpdateStore.state
+//      handleBackgroundUpdateState(state)
+//    }
   }
 }
 
 extension HistoryController {
-  func handleBackgroundUpdateState(_ state: BackgroundUpdateStore.State) {
+  func didGetWalletsStoreEvent(_ event: WalletsStore.Event) {
+    switch event {
+    case .didUpdateActiveWallet:
+      didUpdateWallet?()
+    default:
+      break
+    }
+  }
+  
+  func handleBackgroundUpdateState(_ state: BackgroundUpdateState) {
     let isConnecting: Bool
     switch state {
     case .connecting:
@@ -44,27 +72,5 @@ extension HistoryController {
       isConnecting = false
     }
     didUpdateIsConnecting?(isConnecting)
-  }
-}
-
-extension HistoryController: WalletsStoreObserver {
-  func didGetWalletsStoreEvent(_ event: WalletsStoreEvent) {
-    switch event {
-    case .didUpdateActiveWallet:
-      didUpdateWallet?()
-    default:
-      break
-    }
-  }
-}
-
-extension HistoryController: BackgroundUpdateStoreObserver {
-  public func didGetBackgroundUpdateStoreEvent(_ event: BackgroundUpdateStore.Event) {
-    switch event {
-    case .didUpdateState(let state):
-      handleBackgroundUpdateState(state)
-    case .didReceiveUpdateEvent:
-      break
-    }
   }
 }

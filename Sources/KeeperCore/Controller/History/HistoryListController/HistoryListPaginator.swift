@@ -2,100 +2,189 @@ import Foundation
 import TonSwift
 
 actor HistoryListPaginator {
-  
-  enum Event {
-    case didGetCachedEvents(AccountEvents)
-    case startLoading
-    case noEvents
-    case didLoadEvents(AccountEvents)
-    case startPageLoading
-    case pageLoadingFailed
-  }
-  
-  var didSendEvent: ((Event) -> Void)?
-  
-  // MARK: - State
-  
   enum State {
     case idle
-    case isLoading(task: Task<(AccountEvents), Swift.Error>)
+    case isLoading
   }
+  
+  var eventHandler: ((HistoryListEvent) -> Void)?
+  func setEventHandler(_ eventHandler: ((HistoryListEvent) -> Void)?) { self.eventHandler = eventHandler }
   
   private let limit = 25
   private var nextFrom: Int64?
   private var state: State = .idle
   
-  // MARK: - Dependencies
+  private var sections = [HistoryListSection]()
+  private var sectionsMap = [Date: Int]()
   
+  private let wallet: Wallet
   private let loader: HistoryListLoader
-  private let address: Address
+  private let nftService: NFTService
+  private let historyListMapper: HistoryListMapper
+  private let dateFormatter: DateFormatter
   
   // MARK: - Init
   
-  init(loader: HistoryListLoader,
-       address: Address,
-       didSendEvent: ((Event) -> Void)?) {
+  init(wallet: Wallet,
+       loader: HistoryListLoader,
+       nftService: NFTService,
+       historyListMapper: HistoryListMapper,
+       dateFormatter: DateFormatter) {
+    self.wallet = wallet
     self.loader = loader
-    self.address = address
-    self.didSendEvent = didSendEvent
+    self.nftService = nftService
+    self.historyListMapper = historyListMapper
+    self.dateFormatter = dateFormatter
   }
   
   // MARK: - Logic
   
-  func startLoading() async throws {
-    do {
-      let cachedEvents = try loader.cachedEvents(address: address)
-      didSendEvent?(.didGetCachedEvents(cachedEvents))
-    } catch {
-      didSendEvent?(.startLoading)
+  func start() async {
+    state = .isLoading
+    if let cachedEvents = try? loader.cachedEvents(address: wallet.address) {
+      await handleLoadedEvents(cachedEvents)
+      eventHandler?(.cached(sections))
+    } else {
+      eventHandler?(.loading)
     }
-  
+    
+    sections = []
+    sectionsMap = [:]
     do {
-      let nextEvents = try await loadNextEvents()
-      state = .idle
-      if nextEvents.events.isEmpty {
-        didSendEvent?(.noEvents)
+      let events = try await loadNextPage()
+      if events.events.isEmpty {
+        eventHandler?(.empty)
       } else {
-        didSendEvent?(.didLoadEvents(nextEvents))
+        await handleLoadedEvents(events)
+        eventHandler?(.loaded(sections))
       }
     } catch {
-      didSendEvent?(.noEvents)
+      eventHandler?(.empty)
     }
+    state = .idle
+    await loadNext()
   }
   
   func loadNext() async {
     switch state {
-    case .isLoading:
-      return
     case .idle:
       guard nextFrom != 0 else { return }
-      didSendEvent?(.startPageLoading)
+      state = .isLoading
+      eventHandler?(.pageLoading)
       do {
-        let nextEvents = try await loadNextEvents()
-        didSendEvent?(.didLoadEvents(nextEvents))
+        let events = try await loadNextPage()
+        await handleLoadedEvents(events)
+        eventHandler?(.nextPage(sections))
       } catch {
-        didSendEvent?(.pageLoadingFailed)
+        eventHandler?(.pageLoadingFailed)
       }
       state = .idle
+    case .isLoading:
+      return
+    }
+  }
+}
+
+private extension HistoryListPaginator {
+  func handleLoadedEvents(_ events: AccountEvents) async {
+      let nfts = await handleEventsWithNFTs(events: events.events)
+      handleEvents(events, nfts: nfts)
+    }
+  
+  func handleEvents(_ events: AccountEvents, nfts: NFTsCollection) {
+    let calendar = Calendar.current
+    var updatedSections = [HistoryListSection]()
+    for event in events.events {
+      let eventDate = Date(timeIntervalSince1970: event.timestamp)
+      let dateFormat: String
+      let dateComponents: DateComponents
+      if calendar.isDateInToday(eventDate)
+          || calendar.isDateInYesterday(eventDate)
+          || calendar.isDate(eventDate, equalTo: Date(), toGranularity: .month) {
+        dateComponents = calendar.dateComponents([.year, .month, .day], from: eventDate)
+        dateFormat = "HH:mm"
+      } else {
+        dateComponents = calendar.dateComponents([.year, .month], from: eventDate)
+        dateFormat = "MMM d 'at' HH:mm"
+      }
+
+      guard let sectionDate = calendar.date(from: dateComponents) else { continue }
+      
+      let eventModel = historyListMapper.mapHistoryEvent(
+        event,
+        eventDate: eventDate,
+        nftsCollection: nfts,
+        accountEventRightTopDescriptionProvider: HistoryAccountEventRightTopDescriptionProvider(
+          dateFormatter: dateFormatter,
+          dateFormat: dateFormat
+        )
+      )
+      
+      if let sectionIndex = sectionsMap[sectionDate],
+         sections.count > sectionIndex {
+        let section = sections[sectionIndex]
+        let updatedEvents = section.events + CollectionOfOne(eventModel)
+          .sorted(by: { $0.date > $1.date })
+        let updatedSection = HistoryListSection(
+          date: section.date,
+          title: section.title,
+          events: updatedEvents
+        )
+        if let index = updatedSections.firstIndex(where: { $0.date == updatedSection.date }) {
+          updatedSections.remove(at: index)
+          updatedSections.insert(updatedSection, at: index)
+        } else {
+          updatedSections.append(updatedSection)
+        }
+        sections.remove(at: sectionIndex)
+        sections.insert(updatedSection, at: sectionIndex)
+      } else {
+        let section = HistoryListSection(
+          date: sectionDate,
+          title: historyListMapper.mapEventsSectionDate(sectionDate),
+          events: [eventModel]
+        )
+        updatedSections.append(section)
+        sections = sections + CollectionOfOne(section)
+          .sorted(by: { $0.date > $1.date })
+        sectionsMap = Dictionary(uniqueKeysWithValues: sections.enumerated().map { ($0.element.date, $0.offset) })
+      }
     }
   }
   
-  private func loadNextEvents() async throws -> AccountEvents {
-    let task: Task<AccountEvents, Swift.Error> = Task {
-      let loadedEvents = try await loader.loadEvents(
-        address: address,
-        beforeLt: nextFrom,
-        limit: limit
-      )
-      try Task.checkCancellation()
-      self.nextFrom = loadedEvents.nextFrom
-      return loadedEvents
-    }
-    state = .isLoading(task: task)
-    let events = try await task.value
+  func loadNextPage() async throws -> AccountEvents {
+    let events = try await loader.loadEvents(
+      address: wallet.address,
+      beforeLt: nextFrom,
+      limit: limit
+    )
+    self.nextFrom = events.nextFrom
     if events.events.isEmpty && events.nextFrom != 0 {
-      return try await loadNextEvents()
+      return try await loadNextPage()
     }
     return events
+  }
+  
+  func handleEventsWithNFTs(events: [AccountEvent]) async -> NFTsCollection {
+    let actions = events.flatMap { $0.actions }
+    var nftAddressesToLoad = Set<Address>()
+    var nfts = [Address: NFT]()
+    for action in actions {
+      switch action.type {
+      case .nftItemTransfer(let nftItemTransfer):
+        nftAddressesToLoad.insert(nftItemTransfer.nftAddress)
+      case .nftPurchase(let nftPurchase):
+        nfts[nftPurchase.nft.address] = nftPurchase.nft
+        try? nftService.saveNFT(nft: nftPurchase.nft)
+      default: continue
+      }
+    }
+    guard !nftAddressesToLoad.isEmpty else { return NFTsCollection(nfts: nfts) }
+    
+    if let loadedNFTs = try? await nftService.loadNFTs(addresses: Array(nftAddressesToLoad)) {
+      nfts = loadedNFTs
+    }
+    
+    return NFTsCollection(nfts: nfts)
   }
 }

@@ -17,7 +17,7 @@ struct HistoryListMapper {
   func mapHistoryEvent(_ event: AccountEvent,
                        eventDate: Date,
                        nftsCollection: NFTsCollection,
-                       accountEventRightTopDescriptionProvider: AccountEventRightTopDescriptionProvider) -> HistoryListEvent {
+                       accountEventRightTopDescriptionProvider: AccountEventRightTopDescriptionProvider) -> HistoryEvent {
     var accountEventRightTopDescriptionProvider = accountEventRightTopDescriptionProvider
     let actions = event.actions.compactMap { action in
       let rightTopDescription = accountEventRightTopDescriptionProvider.rightTopDescription(
@@ -30,7 +30,7 @@ struct HistoryListMapper {
         rightTopDescription: rightTopDescription,
         nftsCollection: nftsCollection)
     }
-    return HistoryListEvent(eventId: event.eventId, actions: actions, accountEvent: event, date: eventDate)
+    return HistoryEvent(eventId: event.eventId, actions: actions, accountEvent: event, date: eventDate)
   }
   
   func mapEventsSectionDate(_ date: Date) -> String? {
@@ -54,7 +54,7 @@ private extension HistoryListMapper {
   func mapAction(_ action: AccountEventAction,
                  historyEvent: AccountEvent,
                  rightTopDescription: String?,
-                 nftsCollection: NFTsCollection) -> HistoryListEvent.Action? {
+                 nftsCollection: NFTsCollection) -> HistoryEvent.Action? {
     
     switch action.type {
     case .tonTransfer(let tonTransfer):
@@ -110,7 +110,7 @@ private extension HistoryListMapper {
                                    historyEvent: historyEvent,
                                    preview: action.preview,
                                    rightTopDescription: rightTopDescription,
-                                   status: action.status.rawValue,
+                                   status: action.status.rawValue, 
                                    nftsCollection: nftsCollection)
     case .depositStake(let depositStake):
       return mapDepositStakeAction(depositStake,
@@ -153,8 +153,8 @@ private extension HistoryListMapper {
                             historyEvent: AccountEvent,
                             preview: AccountEventAction.SimplePreview,
                             rightTopDescription: String?,
-                            status: String?) -> HistoryListEvent.Action {
-    let eventType: HistoryListEvent.Action.ActionType
+                            status: String?) -> HistoryEvent.Action {
+    let eventType: HistoryEvent.Action.ActionType
     let leftTopDescription: String
     let amountType: HistoryEventActionAmountMapperActionType
     
@@ -179,7 +179,7 @@ private extension HistoryListMapper {
         maximumFractionDigits: 2,
         type: amountType,
         currency: .TON)
-    return HistoryListEvent.Action(eventType: eventType,
+    return HistoryEvent.Action(eventType: eventType,
                                    amount: amount,
                                    subamount: nil,
                                    leftTopDescription: leftTopDescription,
@@ -194,8 +194,8 @@ private extension HistoryListMapper {
                                historyEvent: AccountEvent,
                                preview: AccountEventAction.SimplePreview,
                                rightTopDescription: String?,
-                               status: String?) -> HistoryListEvent.Action {
-    let eventType: HistoryListEvent.Action.ActionType
+                               status: String?) -> HistoryEvent.Action {
+    let eventType: HistoryEvent.Action.ActionType
     let leftTopDescription: String?
     let amountType: HistoryEventActionAmountMapperActionType
     if historyEvent.isScam {
@@ -220,7 +220,7 @@ private extension HistoryListMapper {
         type: amountType,
         symbol: action.jettonInfo.symbol)
     
-    return HistoryListEvent.Action(eventType: eventType,
+    return HistoryEvent.Action(eventType: eventType,
                                    amount: amount,
                                    subamount: nil,
                                    leftTopDescription: leftTopDescription,
@@ -235,7 +235,7 @@ private extension HistoryListMapper {
                            historyEvent: AccountEvent,
                            preview: AccountEventAction.SimplePreview,
                            rightTopDescription: String?,
-                           status: String?) -> HistoryListEvent.Action {
+                           status: String?) -> HistoryEvent.Action {
     let amount = amountMapper.mapAmount(
       amount: action.amount,
       fractionDigits: action.jettonInfo.fractionDigits,
@@ -243,7 +243,7 @@ private extension HistoryListMapper {
       type: .income,
       symbol: action.jettonInfo.symbol)
     
-    return HistoryListEvent.Action(eventType: .mint,
+    return HistoryEvent.Action(eventType: .mint,
                                    amount: amount,
                                    subamount: nil,
                                    leftTopDescription: action.jettonInfo.name,
@@ -258,7 +258,7 @@ private extension HistoryListMapper {
                            historyEvent: AccountEvent,
                            preview: AccountEventAction.SimplePreview,
                            rightTopDescription: String?,
-                           status: String?) -> HistoryListEvent.Action {
+                           status: String?) -> HistoryEvent.Action {
     let amount = amountMapper.mapAmount(
       amount: action.amount,
       fractionDigits: action.jettonInfo.fractionDigits,
@@ -266,7 +266,7 @@ private extension HistoryListMapper {
       type: .outcome,
       symbol: action.jettonInfo.symbol)
     
-    return HistoryListEvent.Action(eventType: .burn,
+    return HistoryEvent.Action(eventType: .burn,
                                    amount: amount,
                                    subamount: nil,
                                    leftTopDescription: action.jettonInfo.name,
@@ -281,7 +281,7 @@ private extension HistoryListMapper {
                              historyEvent: AccountEvent,
                              preview: AccountEventAction.SimplePreview,
                              rightTopDescription: String?,
-                             status: String?) -> HistoryListEvent.Action {
+                             status: String?) -> HistoryEvent.Action {
     let amount = amountMapper.mapAmount(
       amount: BigUInt(integerLiteral: UInt64(action.amount)),
       fractionDigits: TonInfo.fractionDigits,
@@ -289,7 +289,7 @@ private extension HistoryListMapper {
       type: .outcome,
       currency: .TON)
     
-    return HistoryListEvent.Action(
+    return HistoryEvent.Action(
       eventType: .depositStake,
       amount: amount,
       subamount: nil,
@@ -306,7 +306,7 @@ private extension HistoryListMapper {
                               historyEvent: AccountEvent,
                               preview: AccountEventAction.SimplePreview,
                               rightTopDescription: String?,
-                              status: String?) -> HistoryListEvent.Action {
+                              status: String?) -> HistoryEvent.Action {
     let amount = amountMapper.mapAmount(
       amount: BigUInt(integerLiteral: UInt64(action.amount)),
       fractionDigits: TonInfo.fractionDigits,
@@ -314,7 +314,7 @@ private extension HistoryListMapper {
       type: .income,
       currency: .TON)
     
-    return HistoryListEvent.Action(
+    return HistoryEvent.Action(
       eventType: .withdrawStake,
       amount: amount,
       subamount: nil,
@@ -331,7 +331,7 @@ private extension HistoryListMapper {
                                      historyEvent: AccountEvent,
                                      preview: AccountEventAction.SimplePreview,
                                      rightTopDescription: String?,
-                                     status: String?) -> HistoryListEvent.Action {
+                                     status: String?) -> HistoryEvent.Action {
     let amount = amountMapper.mapAmount(
       amount: BigUInt(integerLiteral: UInt64(action.amount ?? 0)),
       fractionDigits: TonInfo.fractionDigits,
@@ -339,7 +339,7 @@ private extension HistoryListMapper {
       type: .none,
       currency: .TON)
     
-    return HistoryListEvent.Action(eventType: .withdrawStakeRequest,
+    return HistoryEvent.Action(eventType: .withdrawStakeRequest,
                                    amount: amount,
                                    subamount: nil,
                                    leftTopDescription: action.pool.name,
@@ -354,17 +354,17 @@ private extension HistoryListMapper {
                            historyEvent: AccountEvent,
                            preview: AccountEventAction.SimplePreview,
                            rightTopDescription: String?,
-                           status: String?) -> HistoryListEvent.Action {
-    var nft: HistoryListEvent.Action.NFTModel?
+                           status: String?) -> HistoryEvent.Action {
+    var nft: HistoryEvent.Action.NFTModel?
     if let actionNft = action.nft {
-      nft = HistoryListEvent.Action.NFTModel(
+      nft = HistoryEvent.Action.NFTModel(
         nft: actionNft,
         name: actionNft.name,
         collectionName: actionNft.collection?.name ?? .singleNFT,
         image: actionNft.preview.size500)
     }
     
-    return HistoryListEvent.Action(eventType: .bid,
+    return HistoryEvent.Action(eventType: .bid,
                                    amount: preview.value,
                                    subamount: nil,
                                    leftTopDescription: action.bidder.value,
@@ -379,9 +379,9 @@ private extension HistoryListMapper {
                             historyEvent: AccountEvent,
                             preview: AccountEventAction.SimplePreview,
                             rightTopDescription: String?,
-                            status: String?) -> HistoryListEvent.Action {
+                            status: String?) -> HistoryEvent.Action {
     
-    let collectibleViewModel = HistoryListEvent.Action.NFTModel(
+    let collectibleViewModel = HistoryEvent.Action.NFTModel(
       nft: action.nft,
       name: action.nft.name,
       collectionName: action.nft.collection?.name ?? .singleNFT,
@@ -396,7 +396,7 @@ private extension HistoryListMapper {
         currency: .TON
       )
     
-    return HistoryListEvent.Action(
+    return HistoryEvent.Action(
       eventType: .nftPurchase,
       amount: amount,
       subamount: nil,
@@ -413,8 +413,8 @@ private extension HistoryListMapper {
                                historyEvent: AccountEvent,
                                preview: AccountEventAction.SimplePreview,
                                rightTopDescription: String?,
-                               status: String?) -> HistoryListEvent.Action {
-    return HistoryListEvent.Action(
+                               status: String?) -> HistoryEvent.Action {
+    return HistoryEvent.Action(
       eventType: .walletInitialized,
       amount: "-",
       subamount: nil,
@@ -431,7 +431,7 @@ private extension HistoryListMapper {
                                   historyEvent: AccountEvent,
                                   preview: AccountEventAction.SimplePreview,
                                   rightTopDescription: String?,
-                                  status: String?) -> HistoryListEvent.Action {
+                                  status: String?) -> HistoryEvent.Action {
     let amount = amountMapper
       .mapAmount(
         amount: BigUInt(integerLiteral: UInt64(action.tonAttached)),
@@ -441,7 +441,7 @@ private extension HistoryListMapper {
         currency: .TON
       )
     
-    return HistoryListEvent.Action(eventType: .contractExec,
+    return HistoryEvent.Action(eventType: .contractExec,
                                    amount: amount,
                                    subamount: nil,
                                    leftTopDescription: action.contract.value,
@@ -457,8 +457,8 @@ private extension HistoryListMapper {
                              preview: AccountEventAction.SimplePreview,
                              rightTopDescription: String?,
                              status: String?,
-                             nftsCollection: NFTsCollection) -> HistoryListEvent.Action {
-    let eventType: HistoryListEvent.Action.ActionType
+                             nftsCollection: NFTsCollection) -> HistoryEvent.Action {
+    let eventType: HistoryEvent.Action.ActionType
     let leftTopDescription: String?
     
     if historyEvent.isScam {
@@ -472,7 +472,7 @@ private extension HistoryListMapper {
       leftTopDescription = action.sender?.value
     }
     
-    var nft: HistoryListEvent.Action.NFTModel?
+    var nft: HistoryEvent.Action.NFTModel?
     if let actionNft = nftsCollection.nfts[action.nftAddress] {
       nft = .init(nft: actionNft,
                   name: actionNft.name,
@@ -480,7 +480,7 @@ private extension HistoryListMapper {
                   image: actionNft.preview.size500)
     }
     
-    return HistoryListEvent.Action(eventType: eventType,
+    return HistoryEvent.Action(eventType: eventType,
                                    amount: "NFT",
                                    subamount: nil,
                                    leftTopDescription: leftTopDescription,
@@ -495,7 +495,7 @@ private extension HistoryListMapper {
                            historyEvent: AccountEvent,
                            preview: AccountEventAction.SimplePreview,
                            rightTopDescription: String?,
-                           status: String?) -> HistoryListEvent.Action {
+                           status: String?) -> HistoryEvent.Action {
     
     let outAmount: String? = {
       let amount: BigUInt
@@ -554,7 +554,7 @@ private extension HistoryListMapper {
         )
     }()
     
-    return HistoryListEvent.Action(
+    return HistoryEvent.Action(
       eventType: .jettonSwap,
       amount: outAmount,
       subamount: inAmount,
@@ -571,9 +571,9 @@ private extension HistoryListMapper {
                             historyEvent: AccountEvent,
                             preview: AccountEventAction.SimplePreview,
                             rightTopDescription: String?,
-                            status: String?) -> HistoryListEvent.Action {
+                            status: String?) -> HistoryEvent.Action {
     
-    return HistoryListEvent.Action(
+    return HistoryEvent.Action(
       eventType: .domainRenew,
       amount: action.domain,
       subamount: nil,
@@ -587,8 +587,8 @@ private extension HistoryListMapper {
     )
   }
   
-  func mapUnknownAction(rightTopDescription: String?) -> HistoryListEvent.Action {
-    return HistoryListEvent.Action(
+  func mapUnknownAction(rightTopDescription: String?) -> HistoryEvent.Action {
+    return HistoryEvent.Action(
       eventType: .unknown,
       amount: String.Symbol.minus,
       subamount: nil,
