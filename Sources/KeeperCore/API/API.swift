@@ -136,8 +136,8 @@ extension API {
 extension API {
   func getAccountNftItems(address: Address,
                           collectionAddress: Address?,
-                          limit: Int,
-                          offset: Int,
+                          limit: Int?,
+                          offset: Int?,
                           isIndirectOwnership: Bool) async throws -> [NFT] {
     let response = try await tonAPIClient.getAccountNftItems(
       path: .init(account_id: address.toRaw()),
