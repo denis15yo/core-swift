@@ -75,4 +75,19 @@ public extension Assembly {
       loadersAssembly: loadersAssembly
     )
   }
+  
+  func widgetAssembly() -> WidgetAssembly {
+    WidgetAssembly(
+      repositoriesAssembly: repositoriesAssembly,
+      coreAssembly: coreAssembly,
+      servicesAssembly: servicesAssembly,
+      storesAssembly: storesAssembly,
+      formattersAssembly: formattersAssembly,
+      walletsUpdateAssembly: walletUpdateAssembly,
+      configurationAssembly: configurationAssembly,
+      passcodeAssembly: passcodeAssembly,
+      apiAssembly: apiAssembly,
+      loadersAssembly: loadersAssembly
+    )
+  }
 }
