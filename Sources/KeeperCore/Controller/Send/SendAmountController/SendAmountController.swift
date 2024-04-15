@@ -31,7 +31,7 @@ public final class SendAmountController {
   }
   
   public private(set) var token: Token
-  var currency: Currency
+  var currency: Currency = .USD
   var tokenAmount: BigUInt {
     didSet {
       didUpdateTokenAmount()
@@ -60,8 +60,6 @@ public final class SendAmountController {
     self.currencyStore = currencyStore
     self.rateConverter = rateConverter
     self.amountFormatter = amountFormatter
-    
-    self.currency = currencyStore.getActiveCurrency()
   }
   
   public func setToken(_ token: Token) {
@@ -79,11 +77,16 @@ public final class SendAmountController {
   }
   
   public func start() {
-    updateMaximumFractionDigits()
-    updateRates()
-    updateInputValue()
-    updateConvertedValue()
-    didUpdateTokenAmount()
+    Task {
+      currency = await currencyStore.getActiveCurrency()
+      await MainActor.run {
+        updateMaximumFractionDigits()
+        updateRates()
+        updateInputValue()
+        updateConvertedValue()
+        didUpdateTokenAmount()
+      }
+    }
   }
   
   public func toggleMode() {

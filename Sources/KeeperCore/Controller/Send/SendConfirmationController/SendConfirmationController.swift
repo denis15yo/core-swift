@@ -47,11 +47,12 @@ public final class SendConfirmationController {
     self.amountFormatter = amountFormatter
   }
   
-  public func start() {
-    didUpdateModel?(buildInitialModel())
-    Task {
-      await emulate()
+  public func start() async {
+    let model = await buildInitialModel()
+    await MainActor.run {
+      didUpdateModel?(model)
     }
+    await emulate()
   }
   
   public func sendTransaction() async throws {
@@ -68,11 +69,11 @@ public final class SendConfirmationController {
 }
 
 private extension SendConfirmationController {
-  func buildInitialModel() -> SendConfirmationModel {
-    return buildModel(fee: .loading, feeConverted: .value(nil))
+  func buildInitialModel() async -> SendConfirmationModel {
+    return await buildModel(fee: .loading, feeConverted: .value(nil))
   }
   
-  func buildEmulatedModel(fee: Int64?) -> SendConfirmationModel {
+  func buildEmulatedModel(fee: Int64?) async -> SendConfirmationModel {
     let feeItem: LoadableModelItem<String>
     let feeConverted: LoadableModelItem<String?>
     if let fee = fee {
@@ -84,7 +85,7 @@ private extension SendConfirmationController {
       )
       feeItem = .value(feeFormatted)
       let rates = ratesStore.getRates(jettons: [])
-      let currency = currencyStore.getActiveCurrency()
+      let currency = await currencyStore.getActiveCurrency()
       if let rates = rates.ton.first(where: { $0.currency == currency }) {
         let rateConverter = RateConverter()
         let converted = rateConverter.convert(
@@ -107,11 +108,11 @@ private extension SendConfirmationController {
       feeConverted = .value(nil)
     }
     
-    return buildModel(fee: feeItem, feeConverted: feeConverted)
+    return await buildModel(fee: feeItem, feeConverted: feeConverted)
   }
   
   func buildModel(fee: LoadableModelItem<String>,
-                  feeConverted: LoadableModelItem<String?>) -> SendConfirmationModel {
+                  feeConverted: LoadableModelItem<String?>) async -> SendConfirmationModel {
     let image: SendConfirmationModel.Image
     let titleType: SendConfirmationModel.TitleType
     let descriptionType: SendConfirmationModel.DescriptionType
@@ -131,7 +132,7 @@ private extension SendConfirmationController {
           symbol: TonInfo.symbol
         )
         let rates = ratesStore.getRates(jettons: [])
-        let currency = currencyStore.getActiveCurrency()
+        let currency = await currencyStore.getActiveCurrency()
         if let rates = rates.ton.first(where: { $0.currency == currency }) {
           let rateConverter = RateConverter()
           let converted = rateConverter.convert(
@@ -157,7 +158,7 @@ private extension SendConfirmationController {
           symbol: jettonItem.jettonInfo.symbol
         )
         let rates = ratesStore.getRates(jettons: [jettonItem.jettonInfo])
-        let currency = currencyStore.getActiveCurrency()
+        let currency = await currencyStore.getActiveCurrency()
         if let rates = rates.jettonsRates.first(where: { $0.jettonInfo == jettonItem.jettonInfo })?.rates.first(where: { $0.currency == currency }) {
           let rateConverter = RateConverter()
           let converted = rateConverter.convert(
@@ -209,12 +210,12 @@ private extension SendConfirmationController {
         transaction: transactionInfo.trace.transaction
       )
       transactionEmulationExtra = sendTransactionModel.extra
-      let model = buildEmulatedModel(fee: sendTransactionModel.fee)
+      let model = await buildEmulatedModel(fee: sendTransactionModel.fee)
       Task { @MainActor in
         didUpdateModel?(model)
       }
     } catch {
-      let model = buildEmulatedModel(fee: nil)
+      let model = await buildEmulatedModel(fee: nil)
       Task { @MainActor in
         didUpdateModel?(model)
         didGetError?(.failedToCalculateFee)
