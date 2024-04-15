@@ -27,9 +27,7 @@ public final class CollectiblesListController {
     await nftsListPaginator.start()
   }
   
-  public func loadNext() async {
-    await nftsListPaginator.loadNext()
-  }
+  public func loadNext() async {}
   
   public func setDidGetEventHandler(_ handler: ((PaginationEvent<NFT>) -> Void)?) {
     self.didGetEvent = handler

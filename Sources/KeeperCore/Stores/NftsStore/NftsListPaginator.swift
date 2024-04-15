@@ -46,7 +46,7 @@ actor NftsListPaginator {
     }
     
     do {
-      let nfts = try await loadNextPage()
+      let nfts = try await loadAll()
       if nfts.isEmpty {
         eventHandler?(.empty)
       } else {
@@ -58,7 +58,6 @@ actor NftsListPaginator {
       eventHandler?(.empty)
     }
     state = .idle
-    await loadNext()
   }
   
   func loadNext() async {
@@ -82,6 +81,19 @@ actor NftsListPaginator {
 }
 
 private extension NftsListPaginator {
+  private func loadAll() async throws -> [NFT] {
+    let nfts = try await accountNftsService.loadAccountNFTs(
+      accountAddress: wallet.address,
+      collectionAddress: nil,
+      limit: nil,
+      offset: nil,
+      isIndirectOwnership: true
+    )
+    try Task.checkCancellation()
+    hasMore = false
+    return nfts
+  }
+  
   private func loadNextPage() async throws -> [NFT] {
     let nfts = try await accountNftsService.loadAccountNFTs(
       accountAddress: wallet.address,
