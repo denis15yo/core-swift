@@ -17,21 +17,29 @@ public final class TokenPickerController {
  
   private let wallet: Wallet
   private let selectedToken: Token
-  private let balanceStore: BalanceStore
+  private let walletBalanceStore: WalletBalanceStore
   private let amountFormatter: AmountFormatter
   
   init(wallet: Wallet, 
        selectedToken: Token,
-       balanceStore: BalanceStore,
+       walletBalanceStore: WalletBalanceStore,
        amountFormatter: AmountFormatter) {
     self.wallet = wallet
     self.selectedToken = selectedToken
-    self.balanceStore = balanceStore
+    self.walletBalanceStore = walletBalanceStore
     self.amountFormatter = amountFormatter
   }
   
-  public func start() {
-    reloadTokens()
+  public func start() async {
+    _ = await walletBalanceStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .balanceUpdate(let balance, let walletAddress):
+        guard let address = try? observer.wallet.address else { return }
+        guard walletAddress == address else { return }
+        Task { await observer.reloadTokens() }
+      }
+    }
+    await reloadTokens()
   }
   
   public func getTokenAt(index: Int) -> Token {
@@ -46,15 +54,17 @@ public final class TokenPickerController {
 }
 
 private extension TokenPickerController {
-  func reloadTokens() {
+  func reloadTokens() async {
     let balance: Balance
     do {
-      balance = try balanceStore.getBalance(wallet: wallet).balance
+      balance = try await walletBalanceStore.getBalanceState(walletAddress: wallet.address).walletBalance.balance
     } catch {
       balance = Balance(tonBalance: TonBalance(amount: 0), jettonsBalance: [])
     }
     
-    self.tokens = CollectionOfOne(Token.ton) + balance.jettonsBalance.map { Token.jetton($0.item) }
+    await MainActor.run {
+      self.tokens = CollectionOfOne(Token.ton) + balance.jettonsBalance.map { Token.jetton($0.item) }
+    }
     
     let tonFormattedBalance = amountFormatter.formatAmount(
       BigUInt(balance.tonBalance.amount),
@@ -84,14 +94,16 @@ private extension TokenPickerController {
       )
     }
     
-    didUpdateTokens?(CollectionOfOne(tonModel) + jettonModels)
-    
-    switch selectedToken {
-    case .ton:
-      didUpdateSelectedTokenIndex?(0)
-    case .jetton(let jettonItem):
-      guard let index = balance.jettonsBalance.firstIndex(where: { $0.item == jettonItem }) else { return }
-      didUpdateSelectedTokenIndex?(index + 1)
+    await MainActor.run {
+      didUpdateTokens?(CollectionOfOne(tonModel) + jettonModels)
+      
+      switch selectedToken {
+      case .ton:
+        didUpdateSelectedTokenIndex?(0)
+      case .jetton(let jettonItem):
+        guard let index = balance.jettonsBalance.firstIndex(where: { $0.item == jettonItem }) else { return }
+        didUpdateSelectedTokenIndex?(index + 1)
+      }
     }
   }
 }
