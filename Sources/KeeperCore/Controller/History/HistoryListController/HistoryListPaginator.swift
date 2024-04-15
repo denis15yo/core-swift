@@ -7,8 +7,8 @@ actor HistoryListPaginator {
     case isLoading
   }
   
-  var eventHandler: ((HistoryListEvent) -> Void)?
-  func setEventHandler(_ eventHandler: ((HistoryListEvent) -> Void)?) { self.eventHandler = eventHandler }
+  var eventHandler: ((PaginationEvent<HistoryListSection>) -> Void)?
+  func setEventHandler(_ eventHandler: ((PaginationEvent<HistoryListSection>) -> Void)?) { self.eventHandler = eventHandler }
   
   private let limit = 25
   private var nextFrom: Int64?
@@ -41,6 +41,7 @@ actor HistoryListPaginator {
   
   func start() async {
     state = .isLoading
+    nextFrom = nil
     if let cachedEvents = try? loader.cachedEvents(address: wallet.address) {
       await handleLoadedEvents(cachedEvents)
       eventHandler?(.cached(sections))

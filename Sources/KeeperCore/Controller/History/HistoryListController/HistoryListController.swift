@@ -3,7 +3,7 @@ import TonSwift
 
 public final class HistoryListController {
   
-  public var didGetEvent: ((HistoryListEvent) -> Void)?
+  public var didGetEvent: ((PaginationEvent<HistoryListSection>) -> Void)?
   
   private let paginator: HistoryListPaginator
   
@@ -24,7 +24,7 @@ public final class HistoryListController {
 }
 
 private extension HistoryListController {
-  func didGetEvent(_ event: HistoryListEvent) {
+  func didGetEvent(_ event: PaginationEvent<HistoryListSection>) {
     didGetEvent?(event)
   }
 }
