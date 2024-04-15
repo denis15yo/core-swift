@@ -13,7 +13,9 @@ public final class PasscodeConfirmationController {
   }
   
   public var isBiometryEnabled: Bool {
-    securityStore.isBiometryEnabled
+    get async {
+      await securityStore.isBiometryEnabled
+    }
   }
   
   public func validatePasscodeInput(_ passcodeInput: String) -> Bool {
