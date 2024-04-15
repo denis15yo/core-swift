@@ -10,6 +10,7 @@ public final class RootAssembly {
   private let configurationAssembly: ConfigurationAssembly
   private let passcodeAssembly: PasscodeAssembly
   private let apiAssembly: APIAssembly
+  private let loadersAssembly: LoadersAssembly
 
   init(repositoriesAssembly: RepositoriesAssembly,
        coreAssembly: CoreAssembly,
@@ -19,7 +20,8 @@ public final class RootAssembly {
        walletsUpdateAssembly: WalletsUpdateAssembly,
        configurationAssembly: ConfigurationAssembly,
        passcodeAssembly: PasscodeAssembly,
-       apiAssembly: APIAssembly) {
+       apiAssembly: APIAssembly,
+       loadersAssembly: LoadersAssembly) {
     self.repositoriesAssembly = repositoriesAssembly
     self.coreAssembly = coreAssembly
     self.servicesAssembly = servicesAssembly
@@ -29,6 +31,7 @@ public final class RootAssembly {
     self.configurationAssembly = configurationAssembly
     self.passcodeAssembly = passcodeAssembly
     self.apiAssembly = apiAssembly
+    self.loadersAssembly = loadersAssembly
   }
   
   private var _rootController: RootController?
@@ -83,7 +86,8 @@ public final class RootAssembly {
       configurationAssembly: configurationAssembly,
       passcodeAssembly: passcodeAssembly,
       tonConnectAssembly: tonConnectAssembly,
-      apiAssembly: apiAssembly
+      apiAssembly: apiAssembly,
+      loadersAssembly: loadersAssembly
     )
   }
 }

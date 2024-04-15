@@ -47,7 +47,8 @@ public final class ServicesAssembly {
     ActiveWalletsServiceImplementation(
       api: apiAssembly.api,
       jettonsBalanceService: jettonsBalanceService(),
-      accountNFTService: accountNftService()
+      accountNFTService: accountNftService(),
+      currencyService: currencyService()
     )
   }
   

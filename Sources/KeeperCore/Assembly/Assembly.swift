@@ -29,7 +29,12 @@ public final class Assembly {
   private lazy var storesAssembly = StoresAssembly(
     servicesAssembly: servicesAssembly,
     apiAssembly: apiAssembly,
-    coreAssembly: coreAssembly
+    coreAssembly: coreAssembly,
+    repositoriesAssembly: repositoriesAssembly
+  )
+  private lazy var loadersAssembly = LoadersAssembly(
+    servicesAssembly: servicesAssembly,
+    storesAssembly: storesAssembly
   )
   private lazy var formattersAssembly = FormattersAssembly()
   private var walletUpdateAssembly: WalletsUpdateAssembly {
@@ -66,7 +71,8 @@ public extension Assembly {
       walletsUpdateAssembly: walletUpdateAssembly,
       configurationAssembly: configurationAssembly,
       passcodeAssembly: passcodeAssembly,
-      apiAssembly: apiAssembly
+      apiAssembly: apiAssembly,
+      loadersAssembly: loadersAssembly
     )
   }
 }

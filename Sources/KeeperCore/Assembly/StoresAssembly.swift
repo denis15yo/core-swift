@@ -6,13 +6,56 @@ public final class StoresAssembly {
   private let servicesAssembly: ServicesAssembly
   private let apiAssembly: APIAssembly
   private let coreAssembly: CoreAssembly
+  private let repositoriesAssembly: RepositoriesAssembly
   
   init(servicesAssembly: ServicesAssembly,
-       apiAssembly: APIAssembly, 
-       coreAssembly: CoreAssembly) {
+       apiAssembly: APIAssembly,
+       coreAssembly: CoreAssembly,
+       repositoriesAssembly: RepositoriesAssembly) {
     self.servicesAssembly = servicesAssembly
     self.apiAssembly = apiAssembly
     self.coreAssembly = coreAssembly
+    self.repositoriesAssembly = repositoriesAssembly
+  }
+  
+  private weak var _walletBalanceStore: WalletBalanceStore?
+  var walletBalanceStore: WalletBalanceStore {
+    if let _walletBalanceStore {
+      return _walletBalanceStore
+    }
+    let walletBalanceStore = WalletBalanceStore(
+      repository: repositoriesAssembly.walletBalanceRepository()
+    )
+    _walletBalanceStore = walletBalanceStore
+    return walletBalanceStore
+  }
+  
+  private weak var _walletTotalBalanceStore: WalletTotalBalanceStore?
+  func walletTotalBalanceStore(walletsStore: WalletsStore) -> WalletTotalBalanceStore {
+    if let _walletTotalBalanceStore {
+      return _walletTotalBalanceStore
+    }
+    let walletTotalBalanceStore = WalletTotalBalanceStore(
+      walletsStore: walletsStore,
+      walletBalanceStore: walletBalanceStore,
+      tonRatesStore: tonRatesStore,
+      currencyStore: currencyStore,
+      totalBalanceService: servicesAssembly.totalBalanceService()
+    )
+    _walletTotalBalanceStore = walletTotalBalanceStore
+    return walletTotalBalanceStore
+  }
+  private weak var _tonRatesStore: TonRatesStore?
+  var tonRatesStore: TonRatesStore {
+    if let tonRatesStore = _tonRatesStore {
+      return tonRatesStore
+    } else {
+      let tonRatesStore = TonRatesStore(
+        repository: repositoriesAssembly.ratesRepository()
+      )
+      _tonRatesStore = tonRatesStore
+      return tonRatesStore
+    }
   }
   
   private weak var _balanceStore: BalanceStore?
@@ -61,27 +104,6 @@ public final class StoresAssembly {
     }
   }
   
-  private struct NftsStoreWeakWrapper {
-    weak var nftsStore: NftsStore?
-  }
-  private var nftsStores = [Wallet: NftsStoreWeakWrapper]()
-  
-  func nftsStore(wallet: Wallet) -> NftsStore {
-    nftsStores = nftsStores.filter { $0.value.nftsStore != nil }
-    if let nftsStore = nftsStores[wallet]?.nftsStore {
-      return nftsStore
-    } else {
-      let store = NftsStore(
-        loadPaginator: NftsLoadPaginator(
-          wallet: wallet,
-          accountNftsService: servicesAssembly.accountNftService()
-        )
-      )
-      nftsStores[wallet] = NftsStoreWeakWrapper(nftsStore: store)
-      return store
-    }
-  }
-  
   private weak var _securityStore: SecurityStore?
   var securityStore: SecurityStore {
     if let securityStore = _securityStore {
@@ -114,22 +136,6 @@ public final class StoresAssembly {
       )
       _backgroundUpdateStore = backgroundUpdateStore
       return backgroundUpdateStore
-    }
-  }
-  
-  private weak var _totalBalanceStore: TotalBalanceStore?
-  var totalBalanceStore: TotalBalanceStore {
-    if let totalBalanceStore = _totalBalanceStore {
-      return totalBalanceStore
-    } else {
-      let totalBalanceStore = TotalBalanceStore(
-        balanceStore: balanceStore,
-        currencyStore: currencyStore,
-        ratesStore: ratesStore,
-        totalBalanceService: servicesAssembly.totalBalanceService()
-      )
-      _totalBalanceStore = totalBalanceStore
-      return totalBalanceStore
     }
   }
   

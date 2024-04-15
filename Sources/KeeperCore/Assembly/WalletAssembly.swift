@@ -21,8 +21,8 @@ public final class WalletAssembly {
       wallets: wallets,
       activeWallet: activeWallet,
       walletsService: servicesAssembly.walletsService(),
-      backupStore: storesAssembly.backupStore
+      backupStore: storesAssembly.backupStore,
+      walletsStoreUpdate: walletUpdateAssembly.walletsStoreUpdate
     )
-    walletUpdateAssembly.walletsStoreUpdate.addObserver(walletStore)
   }
 }
