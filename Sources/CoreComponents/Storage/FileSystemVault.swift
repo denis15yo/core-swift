@@ -60,13 +60,6 @@ public struct FileSystemVault<T: Codable, Key: CustomStringConvertible> {
     }
     let url = folderPath.appendingPathComponent(key.description)
     do {
-      if fileManager.fileExists(atPath: url.path) {
-          try fileManager.removeItem(at: url)
-      }
-    } catch {
-      throw SaveError.other(key: key, error: error)
-    }
-    do {
       let data = try JSONEncoder().encode(item)
       try data.write(to: url, options: .atomic)
     } catch let encodingError as EncodingError {
