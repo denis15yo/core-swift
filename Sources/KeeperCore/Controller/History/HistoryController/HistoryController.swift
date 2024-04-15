@@ -42,10 +42,10 @@ public final class HistoryController {
   }
   
   public func updateConnectingState() {
-//    Task {
-//      let state = await backgroundUpdateStore.state
-//      handleBackgroundUpdateState(state)
-//    }
+    Task {
+      let state = await backgroundUpdateStore.state
+      handleBackgroundUpdateState(state)
+    }
   }
 }
 

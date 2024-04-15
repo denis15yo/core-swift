@@ -49,10 +49,30 @@ actor HistoryListPaginator {
       eventHandler?(.loading)
     }
     
-    sections = []
-    sectionsMap = [:]
     do {
       let events = try await loadNextPage()
+      sections = []
+      sectionsMap = [:]
+      if events.events.isEmpty {
+        eventHandler?(.empty)
+      } else {
+        await handleLoadedEvents(events)
+        eventHandler?(.loaded(sections))
+      }
+    } catch {
+      eventHandler?(.empty)
+    }
+    state = .idle
+    await loadNext()
+  }
+  
+  func reload() async {
+    state = .isLoading
+    nextFrom = nil
+    do {
+      let events = try await loadNextPage()
+      sections = []
+      sectionsMap = [:]
       if events.events.isEmpty {
         eventHandler?(.empty)
       } else {

@@ -149,7 +149,10 @@ public final class MainAssembly {
       historyListMapper: historyListMapper,
       dateFormatter: formattersAssembly.dateFormatter
     )
-    return HistoryListController(paginator: paginator)
+    return HistoryListController(
+      wallet: wallet,
+      paginator: paginator,
+      backgroundUpdateStore: storesAssembly.backgroundUpdateStore)
   }
   
   public func tonEventsHistoryListController(wallet: Wallet) -> HistoryListController {
@@ -163,7 +166,10 @@ public final class MainAssembly {
       historyListMapper: historyListMapper,
       dateFormatter: formattersAssembly.dateFormatter
     )
-    return HistoryListController(paginator: paginator)
+    return HistoryListController(
+      wallet: wallet,
+      paginator: paginator,
+      backgroundUpdateStore: storesAssembly.backgroundUpdateStore)
   }
   
   public func jettonEventsHistoryListController(jettonItem: JettonItem, wallet: Wallet) -> HistoryListController {
@@ -178,7 +184,10 @@ public final class MainAssembly {
       historyListMapper: historyListMapper,
       dateFormatter: formattersAssembly.dateFormatter
     )
-    return HistoryListController(paginator: paginator)
+    return HistoryListController(
+      wallet: wallet,
+      paginator: paginator,
+      backgroundUpdateStore: storesAssembly.backgroundUpdateStore)
   }
   
   public func tonTokenDetailsController() -> TokenDetailsController {

@@ -5,17 +5,50 @@ public final class HistoryListController {
   
   public var didGetEvent: ((PaginationEvent<HistoryListSection>) -> Void)?
   
-  private let paginator: HistoryListPaginator
+  private var didSendTransactionToken: NSObjectProtocol?
   
-  init(paginator: HistoryListPaginator) {
+  private let wallet: Wallet
+  private let paginator: HistoryListPaginator
+  private let backgroundUpdateStore: BackgroundUpdateStore
+  
+  init(wallet: Wallet,
+       paginator: HistoryListPaginator,
+       backgroundUpdateStore: BackgroundUpdateStore) {
+    self.wallet = wallet
     self.paginator = paginator
+    self.backgroundUpdateStore = backgroundUpdateStore
   }
   
   public func start() async {
+    didSendTransactionToken = NotificationCenter.default.addObserver(
+      forName: NSNotification.Name(rawValue: "didSendTransaction"),
+      object: nil,
+      queue: nil) { [wallet, weak self] notification in
+        guard let notificationWallet = notification.userInfo?["Wallet"] as? Wallet,
+        let notificationWalletAddress = try? notificationWallet.address,
+        let walletAddress = try? wallet.address,
+        notificationWalletAddress == walletAddress else { return }
+        self?.didReceiveDidSendTransactionNotification()
+      }
+    
+    _ = await backgroundUpdateStore.addEventObserver(self) { [wallet] observer, event in
+      switch event {
+      case .didUpdateState:
+        break
+      case .didReceiveUpdateEvent(let backgroundUpdateEvent):
+        guard let walletAddress = try? wallet.address,
+              backgroundUpdateEvent.accountAddress == walletAddress else { return }
+        Task { await observer.didRecieveBackgroudUpdateEvent(backgroundUpdateEvent) }
+      }
+    }
     await paginator.setEventHandler { [weak self] event in
       self?.didGetEvent(event)
     }
     await paginator.start()
+  }
+  
+  public func reload() async {
+    await paginator.reload()
   }
   
   public func loadNext() async {
@@ -26,5 +59,16 @@ public final class HistoryListController {
 private extension HistoryListController {
   func didGetEvent(_ event: PaginationEvent<HistoryListSection>) {
     didGetEvent?(event)
+  }
+  
+  func didRecieveBackgroudUpdateEvent(_ backgroundUpdateEvent: BackgroundUpdateEvent) async {
+    try? await Task.sleep(nanoseconds: 2_000_000_000)
+    await paginator.reload()
+  }
+  
+  func didReceiveDidSendTransactionNotification() {
+    Task {
+      await paginator.reload()
+    }
   }
 }
