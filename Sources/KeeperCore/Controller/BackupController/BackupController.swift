@@ -12,6 +12,8 @@ public final class BackupController {
   
   public var didUpdateBackupState: (() -> Void)?
   
+  private var walletsStoreObservationToken: ObservationToken?
+  
   private var wallet: Wallet {
     didSet {
       reload()
@@ -31,7 +33,13 @@ public final class BackupController {
     self.walletsStore = walletsStore
     self.dateFormatter = dateFormatter
     
-    walletsStore.addObserver(self)
+    walletsStoreObservationToken = walletsStore.addEventObserver(self) { observer, event in
+      observer.didGetWalletsStoreEvent(event)
+    }
+  }
+  
+  deinit {
+    walletsStoreObservationToken?.cancel()
   }
   
   public func reload() {
@@ -58,10 +66,8 @@ private extension BackupController {
     }
     return BackupModel(backupState: backupState)
   }
-}
-
-extension BackupController: WalletsStoreObserver {
-  func didGetWalletsStoreEvent(_ event: WalletsStoreEvent) {
+  
+  func didGetWalletsStoreEvent(_ event: WalletsStore.Event) {
     switch event {
     case .didUpdateWalletBackupState(let wallet):
       guard let wallet = walletsStore.wallets.first(where: { $0.identity == wallet.identity }) else { return }
