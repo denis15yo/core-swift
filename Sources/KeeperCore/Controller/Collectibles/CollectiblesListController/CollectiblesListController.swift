@@ -1,76 +1,46 @@
 import Foundation
 import TonSwift
 
-public actor CollectiblesListController {
+public final class CollectiblesListController {
   public enum Event {
-    case updateNFTs(nfts: [NFTModel])
+    case updateNFTs(nfts: [NFT])
   }
   
-  public var didSendEvent: ((Event) -> Void)?
-  
-  // MARK: - State
-  
-  private var models = [NFTModel]()
+  public var didGetEvent: ((PaginationEvent<NFT>) -> Void)?
   
   // MARK: - Dependencies
   
-  private let nftsStore: NftsStore
-  
+  private let nftsListPaginator: NftsListPaginator
+
   // MARK: - Init
   
-  init(nftsStore: NftsStore) {
-    self.nftsStore = nftsStore
+  init(nftsListPaginator: NftsListPaginator) {
+    self.nftsListPaginator = nftsListPaginator
   }
   
   // MARK: - Logic
   
-  public func start() {
-    Task {
-      await nftsStore.addObserver(self)
-      
-      let cached = await self.nftsStore.getNfts()
-      let models = self.mapNfts(cached)
-      self.didSendEvent?(.updateNFTs(nfts: models))
-      
-      await nftsStore.loadInitialNfts()
+  public func start() async {
+    await nftsListPaginator.setEventHandler { [weak self] event in
+      self?.didGetEvent?(event)
     }
+    await nftsListPaginator.start()
   }
   
-  public func loadNext() {
-    Task {
-      await nftsStore.loadNext()
-    }
+  public func loadNext() async {
+    await nftsListPaginator.loadNext()
   }
   
-  public func setDidSendEventHandler(_ didSendEvent: ((Event) -> Void)?) {
-    self.didSendEvent = didSendEvent
+  public func setDidGetEventHandler(_ handler: ((PaginationEvent<NFT>) -> Void)?) {
+    self.didGetEvent = handler
   }
   
-  public func modelAt(index: Int) -> NFTModel {
-    models[index]
+  public func nftAt(index: Int) async -> NFT {
+    await nftsListPaginator.nfts[index]
   }
 }
 
 private extension CollectiblesListController {
-  nonisolated
-  func mapNfts(_ nfts: [NFT]) -> [NFTModel] {
-    nfts.map { NFTModel(nft: $0) }
-  }
-  
   func handleUpdatedNfts(_ nfts: [NFT]) {
-    let models = self.mapNfts(nfts)
-    self.models = models
-    self.didSendEvent?(.updateNFTs(nfts: self.models))
-  }
-}
-
-extension CollectiblesListController: NftsStoreObserver {
-  nonisolated func didGetNftsStoreEvent(_ event: NftsStore.Event) {
-    switch event {
-    case .didUpdateNFTs(let nfts):
-      Task {
-        await handleUpdatedNfts(nfts)
-      }
-    }
   }
 }

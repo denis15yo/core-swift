@@ -3,6 +3,7 @@ import Foundation
 public final class CollectiblesController {
   
   public var didUpdateIsConnecting: ((Bool) -> Void)?
+  public var didUpdateActiveWallet: (() -> Void)?
 
   private let walletsStore: WalletsStore
   private let backgroundUpdateStore: BackgroundUpdateStore
@@ -11,25 +12,43 @@ public final class CollectiblesController {
        backgroundUpdateStore: BackgroundUpdateStore) {
     self.walletsStore = walletsStore
     self.backgroundUpdateStore = backgroundUpdateStore
-    Task {
-      await backgroundUpdateStore.addObserver(self)
-    }
   }
   
   public var wallet: Wallet {
     walletsStore.activeWallet
   }
   
-  public func updateConnectingState() {
-    Task {
-      let state = await backgroundUpdateStore.state
-      handleBackgroundUpdateState(state)
+  public func start() async {
+    _ = walletsStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .didUpdateActiveWallet:
+        observer.didChangeActiveWallet()
+      default: break
+      }
     }
+    
+    _ = await backgroundUpdateStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .didUpdateState(let backgroundUpdateState):
+        observer.handleBackgroundUpdateState(backgroundUpdateState)
+      case .didReceiveUpdateEvent:
+        break
+      }
+    }
+  }
+  
+  public func updateConnectingState() async {
+    let state = await backgroundUpdateStore.state
+    handleBackgroundUpdateState(state)
   }
 }
 
 private extension CollectiblesController {
-  func handleBackgroundUpdateState(_ state: BackgroundUpdateStore.State) {
+  func didChangeActiveWallet() {
+    didUpdateActiveWallet?()
+  }
+  
+  func handleBackgroundUpdateState(_ state: BackgroundUpdateState) {
     let isConnecting: Bool
     switch state {
     case .connecting:
@@ -42,16 +61,5 @@ private extension CollectiblesController {
       isConnecting = false
     }
     didUpdateIsConnecting?(isConnecting)
-  }
-}
-
-extension CollectiblesController: BackgroundUpdateStoreObserver {
-  public func didGetBackgroundUpdateStoreEvent(_ event: BackgroundUpdateStore.Event) {
-    switch event {
-    case .didUpdateState(let state):
-      handleBackgroundUpdateState(state)
-    case .didReceiveUpdateEvent:
-      break
-    }
   }
 }

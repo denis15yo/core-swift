@@ -5,30 +5,25 @@ public final class CollectibleDetailsController {
     
   public var didUpdateModel: ((CollectibleDetailsModel) -> Void)?
   
-  public var nft: NFT?
-  public let collectibleAddress: Address
+  public let nft: NFT
   private let walletsStore: WalletsStore
   private let nftService: NFTService
   private let dnsService: DNSService
   private let collectibleDetailsMapper: CollectibleDetailsMapper
   
-  init(collectibleAddress: Address,
+  init(nft: NFT,
        walletsStore: WalletsStore,
        nftService: NFTService,
        dnsService: DNSService,
        collectibleDetailsMapper: CollectibleDetailsMapper) {
-    self.collectibleAddress = collectibleAddress
+    self.nft = nft
     self.walletsStore = walletsStore
     self.nftService = nftService
     self.dnsService = dnsService
     self.collectibleDetailsMapper = collectibleDetailsMapper
-    if let nft = try? nftService.getNFT(address: collectibleAddress) {
-      self.nft = nft
-    }
   }
   
   public func prepareCollectibleDetails() throws {
-    let nft = try nftService.getNFT(address: collectibleAddress)
     let model = buildInitialViewModel(nft: nft)
     didUpdateModel?(model)
     guard nft.dns != nil else { return }
