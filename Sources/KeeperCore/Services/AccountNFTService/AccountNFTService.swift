@@ -11,8 +11,8 @@ protocol AccountNFTService {
   func getAccountsNfts(accountAddresses: [Address]) -> [AccountNfts]
   func loadAccountNFTs(accountAddress: Address,
                        collectionAddress: Address?,
-                       limit: Int,
-                       offset: Int,
+                       limit: Int?,
+                       offset: Int?,
                        isIndirectOwnership: Bool) async throws -> [NFT]
   func loadAccountsNfts(accountAddresses: [Address],
                         collectionAddress: Address?,
@@ -51,8 +51,8 @@ final class AccountNFTServiceImplementation: AccountNFTService {
   
   func loadAccountNFTs(accountAddress: Address,
                        collectionAddress: Address?,
-                       limit: Int,
-                       offset: Int,
+                       limit: Int?,
+                       offset: Int?,
                        isIndirectOwnership: Bool) async throws -> [NFT] {
     do {
       let nfts = try await api.getAccountNftItems(

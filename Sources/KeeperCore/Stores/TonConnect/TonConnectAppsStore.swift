@@ -53,11 +53,6 @@ final class TonConnectAppsStore {
     removeNilObservers()
     observers = observers + CollectionOfOne(TonConnectAppsStoreObserverWrapper(observer: observer))
   }
-  
-  func removeObserver(_ observer: CurrencyStoreObserver) {
-    removeNilObservers()
-    observers = observers.filter { $0.observer !== observer }
-  }
 }
 
 private extension TonConnectAppsStore {
