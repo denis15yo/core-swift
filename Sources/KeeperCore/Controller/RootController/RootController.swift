@@ -10,15 +10,18 @@ public final class RootController {
   private let remoteConfigurationStore: ConfigurationStore
   private let knownAccountsStore: KnownAccountsStore
   private let deeplinkParser: DeeplinkParser
+  private let keeperInfoRepository: KeeperInfoRepository
   
   init(walletsService: WalletsService,
        remoteConfigurationStore: ConfigurationStore,
        knownAccountsStore: KnownAccountsStore,
-       deeplinkParser: DeeplinkParser) {
+       deeplinkParser: DeeplinkParser,
+       keeperInfoRepository: KeeperInfoRepository) {
     self.walletsService = walletsService
     self.remoteConfigurationStore = remoteConfigurationStore
     self.knownAccountsStore = knownAccountsStore
     self.deeplinkParser = deeplinkParser
+    self.keeperInfoRepository = keeperInfoRepository
   }
   
   public func getState() -> State {
@@ -45,5 +48,9 @@ public final class RootController {
   
   public func parseDeeplink(string: String?) throws -> Deeplink {
     try deeplinkParser.parse(string: string)
+  }
+  
+  public func logout() async {
+    try? keeperInfoRepository.removeKeeperInfo()
   }
 }

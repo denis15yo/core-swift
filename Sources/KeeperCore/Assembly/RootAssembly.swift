@@ -46,7 +46,8 @@ public final class RootAssembly {
         deeplinkParser: DefaultDeeplinkParser(parsers: [
           TonDeeplinkParser(),
           TonConnectDeeplinkParser()
-        ])
+        ]),
+        keeperInfoRepository: repositoriesAssembly.keeperInfoRepository()
       )
       self._rootController = rootController
       return rootController

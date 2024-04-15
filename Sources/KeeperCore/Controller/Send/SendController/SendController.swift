@@ -248,7 +248,14 @@ private extension SendController {
     case .nft:
       fromWallets = [walletsStore.activeWallet]
     case .token(let token, _):
-      fromWallets = walletsStore.wallets.filter { wallet in
+      fromWallets = walletsStore.wallets
+        .filter {
+          switch $0.model.walletType {
+          case .regular: return true
+          case .watchOnly: return false
+          }
+        }
+        .filter { wallet in
         switch token {
         case .ton:
           return true
