@@ -3,11 +3,22 @@ import TonSwift
 
 public final class MainController {
   
+  actor State {
+    var nftsUpdateTask: Task<(), Never>?
+    
+    func setNftsUpdateTask(_ task: Task<(), Never>?) {
+      self.nftsUpdateTask = task
+    }
+  }
+  
   public var didUpdateNftsAvailability: ((Bool) -> Void)?
   public var didReceiveTonConnectRequest: ((TonConnect.AppRequest, Wallet, TonConnectApp) -> Void)?
   
+  private var walletsStoreObservationToken: ObservationToken?
+  private var backgroundUpdateStoreObservationToken: ObservationToken?
+  
   private let walletsStore: WalletsStore
-  private let nftsStoreProvider: (Wallet) -> NftsStore
+  private let accountNFTService: AccountNFTService
   private let backgroundUpdateStore: BackgroundUpdateStore
   private let tonConnectEventsStore: TonConnectEventsStore
   private let knownAccountsStore: KnownAccountsStore
@@ -18,11 +29,12 @@ public final class MainController {
   // TODO: wrap to service
   private let api: API
   
-  private var nftsStore: NftsStore?
+  private var state = State()
+  
   private var nftStateTask: Task<Void, Never>?
 
   init(walletsStore: WalletsStore, 
-       nftsStoreProvider: @escaping (Wallet) -> NftsStore,
+       accountNFTService: AccountNFTService,
        backgroundUpdateStore: BackgroundUpdateStore,
        tonConnectEventsStore: TonConnectEventsStore,
        knownAccountsStore: KnownAccountsStore,
@@ -32,7 +44,7 @@ public final class MainController {
        deeplinkParser: DeeplinkParser,
        api: API) {
     self.walletsStore = walletsStore
-    self.nftsStoreProvider = nftsStoreProvider
+    self.accountNFTService = accountNFTService
     self.backgroundUpdateStore = backgroundUpdateStore
     self.tonConnectEventsStore = tonConnectEventsStore
     self.knownAccountsStore = knownAccountsStore
@@ -41,47 +53,78 @@ public final class MainController {
     self.tonConnectService = tonConnectService
     self.deeplinkParser = deeplinkParser
     self.api = api
-    
-    walletsStore.addObserver(self)
-    Task {
-      await backgroundUpdateStore.addObserver(self)
-    }
-    Task {
-      await tonConnectEventsStore.addObserver(self)
-    }
   }
   
-  public func loadNftsState() {
-    nftStateTask?.cancel()
-    nftStateTask = nil
-    
-    nftsStore = nftsStoreProvider(walletsStore.activeWallet)
-    Task {
-      await nftsStore?.addObserver(self)
-      let cachedNfts = (await self.nftsStore?.getNfts()) ?? []
-      didUpdateNftsAvailability?(!cachedNfts.isEmpty)
-      nftStateTask = Task {
-        await nftsStore?.loadInitialNfts()
+  deinit {
+    walletsStoreObservationToken?.cancel()
+    backgroundUpdateStoreObservationToken?.cancel()
+  }
+  
+  public func start() async {
+    _ = await backgroundUpdateStore.addEventObserver(self) { observer, state in
+      switch state {
+      case .didUpdateState(let backgroundUpdateState):
+        switch backgroundUpdateState {
+        case .connected:
+          Task { await observer.updateNfts() }
+        default: break
+        }
+      case .didReceiveUpdateEvent(let backgroundUpdateEvent):
+        Task {
+          guard try backgroundUpdateEvent.accountAddress == observer.walletsStore.activeWallet.address else { return }
+          await observer.updateNfts()
+        }
       }
     }
+    
+    _ = walletsStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .didAddWallets:
+        Task { await observer.startBackgroundUpdate() }
+      case .didUpdateActiveWallet:
+        Task { await observer.updateNfts() }
+      default: break
+      }
+    }
+    
+    await tonConnectEventsStore.addObserver(self)
+    
+    await startBackgroundUpdate()
   }
   
-  public func startBackgroundUpdate() {
-    Task {
-      await backgroundUpdateStore.start(addresses: walletsStore.wallets.compactMap { try? $0.address })
+  public func updateNfts() async {
+    await state.nftsUpdateTask?.cancel()
+    await state.setNftsUpdateTask(nil)
+    
+    let task = Task { [accountNFTService, walletsStore] in
+      if let cachedNfts = try? accountNFTService.getAccountNfts(accountAddress: walletsStore.activeWallet.address) {
+        didUpdateNftsAvailability?(!cachedNfts.isEmpty)
+      }
+      do {
+        let nfts = try await accountNFTService.loadAccountNFTs(
+          accountAddress: walletsStore.activeWallet.address,
+          collectionAddress: nil,
+          limit: 10,
+          offset: 0,
+          isIndirectOwnership: true
+        )
+        guard !Task.isCancelled else { return }
+        didUpdateNftsAvailability?(!nfts.isEmpty)
+      } catch {
+        didUpdateNftsAvailability?(false)
+      }
     }
-    Task {
-      await tonConnectEventsStore.start()
-    }
+    await state.setNftsUpdateTask(task)
   }
   
-  public func stopBackgroundUpdate() {
-    Task {
-      await backgroundUpdateStore.stop()
-    }
-    Task {
-      await tonConnectEventsStore.stop()
-    }
+  public func startBackgroundUpdate() async {
+    await backgroundUpdateStore.start(addresses: walletsStore.wallets.compactMap { try? $0.address })
+    await tonConnectEventsStore.start()
+  }
+  
+  public func stopBackgroundUpdate() async {
+    await backgroundUpdateStore.stop()
+    await tonConnectEventsStore.stop()
   }
   
   public func handleTonConnectDeeplink(_ deeplink: TonConnectDeeplink) async throws -> (TonConnectParameters, TonConnectManifest) {
@@ -124,7 +167,7 @@ public final class MainController {
     do {
       let jettonInfo = try await api.resolveJetton(address: jettonAddress)
       for wallet in walletsStore.wallets {
-        guard let balance = try? balanceStore.getBalance(wallet: walletsStore.activeWallet).balance else {
+        guard let balance = try? balanceStore.getBalance(wallet: wallet).balance else {
           continue
         }
         guard let jettonItem =  balance.jettonsBalance.first(where: { $0.item.jettonInfo == jettonInfo })?.item else {
@@ -135,48 +178,6 @@ public final class MainController {
       return nil
     } catch {
       return nil
-    }
-  }
-}
-
-extension MainController: WalletsStoreObserver {
-  func didGetWalletsStoreEvent(_ event: WalletsStoreEvent) {
-    switch event {
-    case .didUpdateActiveWallet:
-      didUpdateNftsAvailability?(false)
-      loadNftsState()
-    case .didAddWallets:
-      startBackgroundUpdate()
-    default:
-      break
-    }
-  }
-}
-
-extension MainController: NftsStoreObserver {
-  func didGetNftsStoreEvent(_ event: NftsStore.Event) {
-    switch event {
-    case .didUpdateNFTs(let nfts):
-      didUpdateNftsAvailability?(!nfts.isEmpty)
-    }
-  }
-}
-
-extension MainController: BackgroundUpdateStoreObserver {
-  public func didGetBackgroundUpdateStoreEvent(_ event: BackgroundUpdateStore.Event) {
-    switch event {
-    case .didReceiveUpdateEvent(let event):
-      do {
-        guard try event.accountAddress == walletsStore.activeWallet.address else { return }
-        loadNftsState()
-      } catch {}
-    case .didUpdateState(let state):
-      switch state {
-      case .connected:
-        loadNftsState()
-      default:
-        break
-      }
     }
   }
 }
