@@ -9,12 +9,14 @@ public final class SettingsSecurityController {
   }
   
   public var isBiometryEnabled: Bool {
-    securityStore.isBiometryEnabled
+    get async {
+      await securityStore.isBiometryEnabled
+    }
   }
   
-  public func setIsBiometryEnabled(_ isBiometryEnabled: Bool) -> Bool {
+  public func setIsBiometryEnabled(_ isBiometryEnabled: Bool) async -> Bool {
     do {
-      try securityStore.setIsBiometryEnabled(isBiometryEnabled)
+      try await securityStore.setIsBiometryEnabled(isBiometryEnabled)
       return isBiometryEnabled
     } catch {
       return !isBiometryEnabled
