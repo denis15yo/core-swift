@@ -382,12 +382,15 @@ public final class MainAssembly {
     )
   }
   
-  public func buyListController(wallet: Wallet) -> BuyListController {
+  public func buyListController(wallet: Wallet,
+                                isMarketRegionPickerAvailable: @escaping () async -> Bool) -> BuyListController {
     BuyListController(
       wallet: wallet,
       buySellMethodsService: servicesAssembly.buySellMethodsService(),
+      locationService: servicesAssembly.locationService(),
       configurationStore: configurationAssembly.remoteConfigurationStore,
-      currencyStore: storesAssembly.currencyStore
+      currencyStore: storesAssembly.currencyStore,
+      isMarketRegionPickerAvailable: isMarketRegionPickerAvailable
     )
   }
 }

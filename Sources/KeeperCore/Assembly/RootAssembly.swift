@@ -47,7 +47,9 @@ public final class RootAssembly {
           TonDeeplinkParser(),
           TonConnectDeeplinkParser()
         ]),
-        keeperInfoRepository: repositoriesAssembly.keeperInfoRepository()
+        keeperInfoRepository: repositoriesAssembly.keeperInfoRepository(),
+        buySellMethodsService: servicesAssembly.buySellMethodsService(),
+        locationService: servicesAssembly.locationService()
       )
       self._rootController = rootController
       return rootController

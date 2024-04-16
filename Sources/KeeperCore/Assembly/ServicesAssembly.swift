@@ -5,15 +5,18 @@ public final class ServicesAssembly {
   private let repositoriesAssembly: RepositoriesAssembly
   private let apiAssembly: APIAssembly
   private let tonkeeperAPIAssembly: TonkeeperAPIAssembly
+  private let locationAPIAsembly: LocationAPIAssembly
   private let coreAssembly: CoreAssembly
   
   init(repositoriesAssembly: RepositoriesAssembly,
        apiAssembly: APIAssembly,
        tonkeeperAPIAssembly: TonkeeperAPIAssembly,
+       locationAPIAsembly: LocationAPIAssembly,
        coreAssembly: CoreAssembly) {
     self.repositoriesAssembly = repositoriesAssembly
     self.apiAssembly = apiAssembly
     self.tonkeeperAPIAssembly = tonkeeperAPIAssembly
+    self.locationAPIAsembly = locationAPIAsembly
     self.coreAssembly = coreAssembly
   }
   
@@ -123,5 +126,9 @@ public final class ServicesAssembly {
       api: tonkeeperAPIAssembly.api,
       buySellMethodsRepository: repositoriesAssembly.buySellMethodsRepository()
     )
+  }
+  
+  func locationService() -> LocationService {
+    LocationServiceImplementation(locationAPI: locationAPIAsembly.locationAPI())
   }
 }

@@ -11,17 +11,23 @@ public final class RootController {
   private let knownAccountsStore: KnownAccountsStore
   private let deeplinkParser: DeeplinkParser
   private let keeperInfoRepository: KeeperInfoRepository
+  private let buySellMethodsService: BuySellMethodsService
+  private let locationService: LocationService
   
   init(walletsService: WalletsService,
        remoteConfigurationStore: ConfigurationStore,
        knownAccountsStore: KnownAccountsStore,
        deeplinkParser: DeeplinkParser,
-       keeperInfoRepository: KeeperInfoRepository) {
+       keeperInfoRepository: KeeperInfoRepository,
+       buySellMethodsService: BuySellMethodsService,
+       locationService: LocationService) {
     self.walletsService = walletsService
     self.remoteConfigurationStore = remoteConfigurationStore
     self.knownAccountsStore = knownAccountsStore
     self.deeplinkParser = deeplinkParser
     self.keeperInfoRepository = keeperInfoRepository
+    self.buySellMethodsService = buySellMethodsService
+    self.locationService = locationService
   }
   
   public func getState() -> State {
@@ -43,6 +49,14 @@ public final class RootController {
   public func loadKnownAccounts() {
     Task {
       try await knownAccountsStore.load()
+    }
+  }
+  
+  public func loadBuySellMethods() {
+    Task {
+      let countryCode = try await locationService.getCountryCodeByIp()
+      let methods = try await buySellMethodsService.loadFiatMethods(countryCode: countryCode)
+      try? buySellMethodsService.saveFiatMethods(methods)
     }
   }
   

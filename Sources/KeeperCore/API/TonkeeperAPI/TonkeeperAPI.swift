@@ -10,7 +10,7 @@ protocol TonkeeperAPI {
                          chainName: String,
                          platform: String) async throws -> RemoteConfiguration
   func loadChart(period: Period) async throws -> [Coordinate]
-  func loadFiatMethods() async throws -> FiatMethods
+  func loadFiatMethods(countryCode: String?) async throws -> FiatMethods
 }
 
 struct TonkeeperAPIImplementation: TonkeeperAPI {
@@ -28,15 +28,15 @@ struct TonkeeperAPIImplementation: TonkeeperAPI {
                          platform: String) async throws -> RemoteConfiguration {
     let url = host.appendingPathComponent("/keys")
     guard var components = URLComponents(
-        url: url,
-        resolvingAgainstBaseURL: false
+      url: url,
+      resolvingAgainstBaseURL: false
     ) else { throw TonkeeperAPIError.incorrectUrl }
     
     components.queryItems = [
-        .init(name: "lang", value: lang),
-        .init(name: "build", value: build),
-        .init(name: "chainName", value: chainName),
-        .init(name: "platform", value: platform)
+      .init(name: "lang", value: lang),
+      .init(name: "build", value: build),
+      .init(name: "chainName", value: chainName),
+      .init(name: "platform", value: "ios_x")
     ]
     guard let url = components.url else { throw TonkeeperAPIError.incorrectUrl }
     let (data, _) = try await urlSession.data(from: url)
@@ -45,36 +45,40 @@ struct TonkeeperAPIImplementation: TonkeeperAPI {
   }
   
   func loadChart(period: Period) async throws -> [Coordinate] {
-      let url = host.appendingPathComponent("/stock/chart-new")
-      guard var components = URLComponents(
-          url: url,
-          resolvingAgainstBaseURL: false
-      ) else { return [] }
-      
-      components.queryItems = [
-          .init(name: "period", value: period.stringValue)
-      ]
-      guard let url = components.url else { return [] }
-      let (data, _) = try await urlSession.data(from: url)
-      let entity = try JSONDecoder().decode(ChartEntity.self, from: data)
-      return entity.coordinates
+    let url = host.appendingPathComponent("/stock/chart-new")
+    guard var components = URLComponents(
+      url: url,
+      resolvingAgainstBaseURL: false
+    ) else { return [] }
+    
+    components.queryItems = [
+      .init(name: "period", value: period.stringValue)
+    ]
+    guard let url = components.url else { return [] }
+    let (data, _) = try await urlSession.data(from: url)
+    let entity = try JSONDecoder().decode(ChartEntity.self, from: data)
+    return entity.coordinates
   }
   
-  func loadFiatMethods() async throws -> FiatMethods {
-      let url = host.appendingPathComponent("/fiat/methods")
-      guard var components = URLComponents(
-          url: url,
-          resolvingAgainstBaseURL: false
-      ) else { throw TonkeeperAPIError.incorrectUrl }
-      
-      components.queryItems = [
-          .init(name: "lang", value: "en"),
-          .init(name: "build", value: "3.4.0"),
-          .init(name: "chainName", value: "mainnet")
-      ]
-      guard let url = components.url else { throw TonkeeperAPIError.incorrectUrl }
-      let (data, _) = try await urlSession.data(from: url)
-      let entity = try JSONDecoder().decode(FiatMethodsResponse.self, from: data)
-      return entity.data
+  func loadFiatMethods(countryCode: String?) async throws -> FiatMethods {
+    let url = host.appendingPathComponent("/fiat/methods")
+    guard var components = URLComponents(
+      url: url,
+      resolvingAgainstBaseURL: false
+    ) else { throw TonkeeperAPIError.incorrectUrl }
+    
+    components.queryItems = [
+      .init(name: "lang", value: "en"),
+      .init(name: "build", value: "3.4.0"),
+      .init(name: "chainName", value: "mainnet"),
+      .init(name: "platform", value: "ios_x")
+    ]
+    if let countryCode = countryCode {
+      components.queryItems?.append(URLQueryItem(name: "countryCode", value: countryCode))
+    }
+    guard let url = components.url else { throw TonkeeperAPIError.incorrectUrl }
+    let (data, _) = try await urlSession.data(from: url)
+    let entity = try JSONDecoder().decode(FiatMethodsResponse.self, from: data)
+    return entity.data
   }
 }
