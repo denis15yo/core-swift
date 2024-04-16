@@ -48,4 +48,8 @@ public final class RepositoriesAssembly {
   func knownAccountsRepository() -> KnownAccountsRepository {
     KnownAccountsRepositoryImplementation(fileSystemVault: coreAssembly.fileSystemVault())
   }
+  
+  func buySellMethodsRepository() -> BuySellMethodsRepository {
+    BuySellMethodsRepositoryImplementation(fileSystemVault: coreAssembly.fileSystemVault())
+  }
 }

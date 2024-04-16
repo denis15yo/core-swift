@@ -117,4 +117,11 @@ public final class ServicesAssembly {
       knownAccountsRepository: repositoriesAssembly.knownAccountsRepository()
     )
   }
+  
+  func buySellMethodsService() -> BuySellMethodsService {
+    BuySellMethodsServiceImplementation(
+      api: tonkeeperAPIAssembly.api,
+      buySellMethodsRepository: repositoriesAssembly.buySellMethodsRepository()
+    )
+  }
 }

@@ -381,6 +381,15 @@ public final class MainAssembly {
       amountFormatter: formattersAssembly.amountFormatter
     )
   }
+  
+  public func buyListController(wallet: Wallet) -> BuyListController {
+    BuyListController(
+      wallet: wallet,
+      buySellMethodsService: servicesAssembly.buySellMethodsService(),
+      configurationStore: configurationAssembly.remoteConfigurationStore,
+      currencyStore: storesAssembly.currencyStore
+    )
+  }
 }
 
 private extension MainAssembly {
