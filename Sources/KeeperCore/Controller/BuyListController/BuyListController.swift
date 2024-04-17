@@ -1,23 +1,7 @@
 import Foundation
 
 public final class BuyListController {
-  public var didUpdateMethods: (([[BuySellItem]]) -> Void)?
-  
-  public struct BuySellItem {
-    public struct Button {
-      public let title: String
-      public let url: String?
-    }
-    
-    public let id: String
-    public let title: String
-    public let description: String?
-    public let token: String?
-    public let iconURL: URL?
-    public let actionButton: Button?
-    public let infoButtons: [Button]
-    public let actionURL: URL?
-  }
+  public var didUpdateMethods: (([[BuySellItemModel]]) -> Void)?
   
   private let wallet: Wallet
   private let buySellMethodsService: BuySellMethodsService
@@ -56,7 +40,7 @@ public final class BuyListController {
 }
 
 private extension BuyListController {
-  func loadFiatMethods() async throws -> [[BuySellItem]] {
+  func loadFiatMethods() async throws -> [[BuySellItemModel]] {
     if await !isMarketRegionPickerAvailable() {
       return try await loadFiatMethodsByLocationRequired()
     } else {
@@ -64,7 +48,7 @@ private extension BuyListController {
     }
   }
   
-  func loadFiatMethodsByLocationRequired() async throws -> [[BuySellItem]]  {
+  func loadFiatMethodsByLocationRequired() async throws -> [[BuySellItemModel]]  {
     do {
       let countryCode = try await locationService.getCountryCodeByIp()
       let methods = try await buySellMethodsService.loadFiatMethods(countryCode: countryCode)
@@ -75,22 +59,22 @@ private extension BuyListController {
     }
   }
   
-  func loadDefaultFiatMethods() async throws -> [[BuySellItem]]  {
+  func loadDefaultFiatMethods() async throws -> [[BuySellItemModel]]  {
     let methods = try await buySellMethodsService.loadFiatMethods(countryCode: nil)
     try? buySellMethodsService.saveFiatMethods(methods)
     return await mapFiatMethods(methods)
   }
   
-  func mapFiatMethods(_ fiatMethods: FiatMethods) async -> [[BuySellItem]] {
+  func mapFiatMethods(_ fiatMethods: FiatMethods) async -> [[BuySellItemModel]] {
     let currency = await currencyStore.getActiveCurrency()
-    var sections = [[BuySellItem]]()
+    var sections = [[BuySellItemModel]]()
     for category in fiatMethods.categories {
-      var items = [BuySellItem]()
+      var items = [BuySellItemModel]()
       for categoryItem in category.items {
         guard availableFiatMethods.contains(categoryItem.id) else {
           continue
         }
-        let item = BuySellItem(
+        let item = BuySellItemModel(
           id: categoryItem.id,
           title: categoryItem.title,
           description: categoryItem.description,
