@@ -23,7 +23,7 @@ public struct WalletModel: Equatable {
 }
 
 extension Wallet {
-  var model: WalletModel {
+  public var model: WalletModel {
     
     let walletType: WalletModel.WalletType
     switch self.identity.kind {

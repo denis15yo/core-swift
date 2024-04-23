@@ -4,28 +4,29 @@ public final class SettingsController {
   
   public var didUpdateActiveWallet: (() -> Void)?
   public var didUpdateActiveCurrency: (() -> Void)?
+  public var didDeleteWallet: (() -> Void)?
+  public var didDeleteLastWallet: (() -> Void)?
   
   private var walletsStoreToken: ObservationToken?
   private var currencyStoreToken: ObservationToken?
   
   private let walletsStore: WalletsStore
+  private let updateStore: WalletsStoreUpdate
   private let currencyStore: CurrencyStore
   private let configurationStore: ConfigurationStore
   
   init(walletsStore: WalletsStore,
+       updateStore: WalletsStoreUpdate,
        currencyStore: CurrencyStore,
        configurationStore: ConfigurationStore) {
     self.walletsStore = walletsStore
+    self.updateStore = updateStore
     self.currencyStore = currencyStore
     self.configurationStore = configurationStore
     
     walletsStoreToken = walletsStore.addEventObserver(self) { observer, event in
       observer.didGetWalletsStoreEvent(event)
     }
-    
-//    currencyStoreToken = currencyStore.addEventObserver(self) { observer, event in
-//      observer.didGetCurrencyStoreEvent(event)
-//    }
   }
   
   public func activeWallet() -> Wallet {
@@ -47,6 +48,14 @@ public final class SettingsController {
   
   public func setCurrency(_ currency: Currency) async {
     await currencyStore.setActiveCurrency(currency)
+  }
+  
+  public func canDeleteAccount() -> Bool {
+    walletsStore.wallets.count > 1
+  }
+  
+  public func deleteAccount() throws {
+    try updateStore.deleteWallet(walletsStore.activeWallet)
   }
   
   public var supportURL: URL? {
@@ -77,6 +86,10 @@ private extension SettingsController {
     case .didUpdateWalletMetadata(let wallet):
       guard wallet == walletsStore.activeWallet else { return }
       didUpdateActiveWallet?()
+    case .didDeleteWallet:
+      didDeleteWallet?()
+    case .didDeleteLastWallet:
+      didDeleteLastWallet?()
     default:
       break
     }

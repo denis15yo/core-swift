@@ -8,6 +8,8 @@ final class WalletsStoreUpdate {
     case didUpdateActiveWallet
     case didUpdateWalletMetadata(Wallet, WalletMetaData)
     case didUpdateWalletsOrder
+    case didDeleteWallet(Wallet)
+    case didDeleteAll
   }
   
   private let walletsService: WalletsService
@@ -34,6 +36,16 @@ final class WalletsStoreUpdate {
   func updateWallet(_ wallet: Wallet, metaData: WalletMetaData) throws {
     try walletsService.updateWallet(wallet: wallet, metaData: metaData)
     observations.values.forEach { $0(.didUpdateWalletMetadata(wallet, metaData)) }
+  }
+  
+  func deleteWallet(_ wallet: Wallet) throws {
+    let result = try walletsService.deleteWallet(wallet: wallet)
+    switch result {
+    case .deletedWallet:
+      observations.values.forEach { $0(.didDeleteWallet(wallet)) }
+    case .deletedAll:
+      observations.values.forEach { $0(.didDeleteAll) }
+    }
   }
   
   private var observations = [UUID: ObservationClosure]()

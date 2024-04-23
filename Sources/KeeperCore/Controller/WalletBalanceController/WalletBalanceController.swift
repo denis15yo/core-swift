@@ -32,6 +32,7 @@ public final class WalletBalanceController {
     public let fullAddress: String?
   }
   
+  public var didChangeWallet: (() -> Void)?
   private var didUpdateState: ((StateModel) -> Void)?
   private var didUpdateBalanceState: ((WalletBalanceItemsModel) -> Void)?
   private var didUpdateSetupState: ((WalletBalanceSetupModel?) -> Void)?
@@ -39,7 +40,15 @@ public final class WalletBalanceController {
   private let state = State()
   private let balanceState = BalanceState()
   
-  private let wallet: Wallet
+  public private(set) var wallet: Wallet {
+    didSet {
+      Task {
+        await setInitialState()
+        didChangeWallet?()
+      }
+    }
+  }
+  
   private let walletsStore: WalletsStore
   private let walletBalanceStore: WalletBalanceStore
   private let walletTotalBalanceStore: WalletTotalBalanceStore
@@ -50,8 +59,7 @@ public final class WalletBalanceController {
   private let backgroundUpdateStore: BackgroundUpdateStore
   private let walletBalanceMapper: WalletBalanceMapper
   
-  init(wallet: Wallet,
-       walletsStore: WalletsStore,
+  init(walletsStore: WalletsStore,
        walletBalanceStore: WalletBalanceStore,
        walletTotalBalanceStore: WalletTotalBalanceStore,
        tonRatesStore: TonRatesStore,
@@ -60,7 +68,6 @@ public final class WalletBalanceController {
        securityStore: SecurityStore,
        backgroundUpdateStore: BackgroundUpdateStore,
        walletBalanceMapper: WalletBalanceMapper) {
-    self.wallet = wallet
     self.walletsStore = walletsStore
     self.walletBalanceStore = walletBalanceStore
     self.walletTotalBalanceStore = walletTotalBalanceStore
@@ -70,6 +77,8 @@ public final class WalletBalanceController {
     self.securityStore = securityStore
     self.backgroundUpdateStore = backgroundUpdateStore
     self.walletBalanceMapper = walletBalanceMapper
+    
+    self.wallet = walletsStore.activeWallet
   }
   
   public func start(didUpdateState: ((StateModel) -> Void)?,
@@ -145,8 +154,10 @@ private extension WalletBalanceController {
       }
     }
     
-    _ = walletsStore.addEventObserver(self) { observer, event in
+    _ = walletsStore.addEventObserver(self) { [walletsStore] observer, event in
       switch event {
+      case .didUpdateActiveWallet:
+        observer.wallet = walletsStore.activeWallet
       case .didUpdateWalletBackupState(let wallet):
         guard wallet == self.wallet else { return }
         Task { await observer.didUpdateSetup(wallet: wallet) }

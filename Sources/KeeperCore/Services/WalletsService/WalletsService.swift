@@ -9,6 +9,11 @@ enum WalletsServiceError: Swift.Error {
   case incorrectActiveWalletIdentity
 }
 
+public enum WalletsServiceDeleteWalletResult {
+  case deletedWallet
+  case deletedAll
+}
+
 public protocol WalletsService {
   func getWallets() throws -> [Wallet]
   func getActiveWallet() throws -> Wallet
@@ -17,6 +22,7 @@ public protocol WalletsService {
   func moveWallet(fromIndex: Int, toIndex: Int) throws
   func updateWallet(wallet: Wallet, metaData: WalletMetaData) throws
   func updateWallet(wallet: Wallet, setupSettings: WalletSetupSettings) throws 
+  func deleteWallet(wallet: Wallet) throws -> WalletsServiceDeleteWalletResult
 }
 
 final class WalletsServiceImplementation: WalletsService {
@@ -115,6 +121,29 @@ final class WalletsServiceImplementation: WalletsService {
     }
     
     try keeperInfoRepository.saveKeeperInfo(updatedKeeperInfo)
+  }
+
+  func deleteWallet(wallet: Wallet) throws -> WalletsServiceDeleteWalletResult {
+    let currentKeeperInfo = try keeperInfoRepository.getKeeperInfo()
+    var wallets = currentKeeperInfo.wallets
+    wallets = wallets.filter { $0.identity != wallet.identity }
+    if wallets.isEmpty {
+      try keeperInfoRepository.removeKeeperInfo()
+      return .deletedAll
+    } else {
+      let updatedActiveWallet: Wallet
+      if currentKeeperInfo.currentWallet == wallet {
+        updatedActiveWallet = wallets[0]
+      } else {
+        updatedActiveWallet = currentKeeperInfo.currentWallet
+      }
+      let updatedKeeperInfo = currentKeeperInfo.setWallets(
+        wallets,
+        activeWallet: updatedActiveWallet
+      )
+      try keeperInfoRepository.saveKeeperInfo(updatedKeeperInfo)
+      return .deletedWallet
+    }
   }
 }
 

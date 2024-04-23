@@ -6,19 +6,18 @@ public final class WalletListController {
   actor State {
     var wallets = [Wallet]()
     var selectedWallet: Wallet?
-    var totalBalanceStates = [Wallet: TotalBalanceState]()
+    var models = [ItemModel]()
     
     func setWallets(_ wallets: [Wallet]) {
       self.wallets = wallets
     }
     
-    func setTotalBalanceState(_ totalBalanceState: TotalBalanceState, 
-                              wallet: Wallet) {
-      totalBalanceStates[wallet] = totalBalanceState
+    func setSelectedWallet(_ wallet: Wallet?) {
+      self.selectedWallet = wallet
     }
     
-    func setSelectedWallet(_ wallet: Wallet?) {
-      selectedWallet = wallet
+    func setModels(_ models: [ItemModel]) {
+      self.models = models
     }
   }
   
@@ -108,24 +107,16 @@ private extension WalletListController {
   
   func setInitialState() async {
     let wallets = configurator.getWallets()
+    let selectedWallet = configurator.getSelectedWallet()
+    let models = wallets.map { ItemModel(id: $0.id, walletModel: $0.model, totalBalance: "-") }
+    
     await state.setWallets(wallets)
-    await state.setSelectedWallet(configurator.getSelectedWallet())
+    await state.setSelectedWallet(selectedWallet)
+    await state.setModels(models)
+    
     await didUpdateState()
-    for wallet in wallets {
-      do {
-        if let walletTotalBalanceState = try await walletTotalBalanceStore.getTotalBalanceState(
-          walletAddress: wallet.address
-        ) {
-          await state.setTotalBalanceState(
-            walletTotalBalanceState,
-            wallet: wallet
-          )
-        }
-      } catch {
-        continue
-      }
-    }
-    await didUpdateState()
+    
+    await updateWalletModels()
   }
   
   func didUpdateTotalBalanceState(_ totalBalanceState: TotalBalanceState,
@@ -135,18 +126,16 @@ private extension WalletListController {
         guard let address = try? $0.address else { return false }
         return address == walletAddress
       }
-    for wallet in wallets {
-      await state.setTotalBalanceState(totalBalanceState, wallet: wallet)
-    }
-    await didUpdateState()
+    await updateWalletModels()
   }
   
   func didUpdateWalletsOrder() async {
-    await setInitialState()
+    await state.setWallets(walletsStore.wallets)
+    await updateWalletModels()
   }
   
   func didUpdateState() async {
-    let itemsModels = await getItemModels()
+    let models = await state.models
     
     let selectedIndex: Int?
     if let selectedWallet = await state.selectedWallet {
@@ -156,30 +145,33 @@ private extension WalletListController {
     }
     
     let model = Model(
-      items: itemsModels,
+      items: models,
       selectedIndex: selectedIndex,
-      isEditable: itemsModels.count > 1 && configurator.isEditable
+      isEditable: models.count > 1 && configurator.isEditable
     )
+    
     didUpdateState?(model)
   }
   
-  func getItemModels() async -> [ItemModel] {
-    let currency = await currencyStore.getActiveCurrency()
+  func updateWalletModels() async {
     let wallets = await state.wallets
-    let totalBalanceStates = await state.totalBalanceStates
-    let itemModels = wallets.map { wallet in
-      var balance = ""
-      if let walletTotalBalance = totalBalanceStates[wallet] {
-        balance = walletListMapper.mapTotalBalance(
-          walletTotalBalance.totalBalance,
+    let currency = await currencyStore.getActiveCurrency()
+    var modelsWithBalance = [ItemModel]()
+    for wallet in wallets {
+      if let walletTotalBalanceState = try? await walletTotalBalanceStore.getTotalBalanceState(walletAddress: wallet.address) {
+        let balance = walletListMapper.mapTotalBalance(
+          walletTotalBalanceState.totalBalance,
           currency: currency
         )
+        let model = ItemModel(id: wallet.id, walletModel: wallet.model, totalBalance: balance)
+        modelsWithBalance.append(model)
+
+      } else {
+        let model = ItemModel(id: wallet.id, walletModel: wallet.model, totalBalance: "-")
+        modelsWithBalance.append(model)
       }
-      return walletListMapper.mapWalletModel(
-        wallet: wallet,
-        balance: balance
-      )
     }
-    return itemModels
+    await state.setModels(modelsWithBalance)
+    await didUpdateState()
   }
 }

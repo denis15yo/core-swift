@@ -43,7 +43,7 @@ actor HistoryListPaginator {
     state = .isLoading
     nextFrom = nil
     if let cachedEvents = try? loader.cachedEvents(address: wallet.address) {
-      await handleLoadedEvents(cachedEvents)
+      await handleCachedEvents(cachedEvents)
       eventHandler?(.cached(sections))
     } else {
       eventHandler?(.loading)
@@ -108,9 +108,14 @@ actor HistoryListPaginator {
 
 private extension HistoryListPaginator {
   func handleLoadedEvents(_ events: AccountEvents) async {
-      let nfts = await handleEventsWithNFTs(events: events.events)
-      handleEvents(events, nfts: nfts)
-    }
+    let nfts = await handleEventsWithNFTs(events: events.events)
+    handleEvents(events, nfts: nfts)
+  }
+  
+  func handleCachedEvents(_ events: AccountEvents) async {
+    let nfts = await handleCachedEventsWithNFTs(events: events.events)
+    handleEvents(events, nfts: nfts)
+  }
   
   func handleEvents(_ events: AccountEvents, nfts: NFTsCollection) {
     let calendar = Calendar.current
@@ -204,6 +209,23 @@ private extension HistoryListPaginator {
     
     if let loadedNFTs = try? await nftService.loadNFTs(addresses: Array(nftAddressesToLoad)) {
       nfts = loadedNFTs
+    }
+    
+    return NFTsCollection(nfts: nfts)
+  }
+  
+  func handleCachedEventsWithNFTs(events: [AccountEvent]) async ->  NFTsCollection {
+    let actions = events.flatMap { $0.actions }
+    var nfts = [Address: NFT]()
+    for action in actions {
+      switch action.type {
+      case .nftItemTransfer(let nftItemTransfer):
+        nfts[nftItemTransfer.nftAddress] = try? nftService.getNFT(address: nftItemTransfer.nftAddress)
+      case .nftPurchase(let nftPurchase):
+        nfts[nftPurchase.nft.address] = nftPurchase.nft
+        try? nftService.saveNFT(nft: nftPurchase.nft)
+      default: continue
+      }
     }
     
     return NFTsCollection(nfts: nfts)

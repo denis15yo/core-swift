@@ -9,6 +9,8 @@ final class WalletsStore {
     case didUpdateWalletMetadata(Wallet)
     case didUpdateWalletsOrder
     case didUpdateWalletBackupState(Wallet)
+    case didDeleteWallet(Wallet)
+    case didDeleteLastWallet
   }
   
   public private(set) var wallets: [Wallet]
@@ -112,6 +114,19 @@ private extension WalletsStore {
       } catch {
         print("Log: failed to update WalletsStore after update wallets order, error: \(error)")
       }
+    case .didDeleteWallet(let wallet):
+      do {
+        let wallets = try walletsService.getWallets()
+        let activeWallet = try walletsService.getActiveWallet()
+        self.wallets = wallets
+        self.activeWallet = activeWallet
+        observations.values.forEach { $0(.didUpdateActiveWallet) }
+        observations.values.forEach { $0(.didDeleteWallet(wallet)) }
+      } catch {
+        print("Log: failed to update WalletsStore after wallet delete \(wallet), error: \(error)")
+      }
+    case .didDeleteAll:
+      observations.values.forEach { $0(.didDeleteLastWallet) }
     }
   }
   

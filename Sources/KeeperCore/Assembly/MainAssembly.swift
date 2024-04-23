@@ -110,9 +110,8 @@ public final class MainAssembly {
     )
   }
   
-  public func walletBalanceController(wallet: Wallet) -> WalletBalanceController {
+  public func walletBalanceController() -> WalletBalanceController {
     WalletBalanceController(
-      wallet: wallet,
       walletsStore: walletAssembly.walletStore,
       walletBalanceStore: storesAssembly.walletBalanceStore,
       walletTotalBalanceStore: storesAssembly.walletTotalBalanceStore(walletsStore: walletAssembly.walletStore),
@@ -128,6 +127,7 @@ public final class MainAssembly {
   public var settingsController: SettingsController {
     SettingsController(
       walletsStore: walletAssembly.walletStore,
+      updateStore: walletUpdateAssembly.walletsStoreUpdate,
       currencyStore: storesAssembly.currencyStore,
       configurationStore: configurationAssembly.remoteConfigurationStore
     )
