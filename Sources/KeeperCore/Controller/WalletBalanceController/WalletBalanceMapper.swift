@@ -109,7 +109,8 @@ struct WalletBalanceMapper {
     }
     
     return (verified + unverified)
-      .map { jettonBalance in
+      .compactMap { jettonBalance in
+        guard !jettonBalance.quantity.isZero else { return nil }
         let jettonRates = jettonsRates.first(where: { $0.jettonInfo == jettonBalance.item.jettonInfo })
         return mapJetton(
           jettonBalance: jettonBalance,
