@@ -58,6 +58,16 @@ public final class StoresAssembly {
     }
   }
   
+  private weak var _nftsStore: NftsStore?
+  var nftsStore: NftsStore {
+    if let _nftsStore {
+      return _nftsStore
+    }
+    let nftsStore = NftsStore(service: servicesAssembly.accountNftService())
+    _nftsStore = nftsStore
+    return nftsStore
+  }
+  
   private weak var _balanceStore: BalanceStore?
   var balanceStore: BalanceStore {
     if let balanceStore = _balanceStore {

@@ -74,6 +74,8 @@ public final class MainAssembly {
     WalletMainController(
       walletsStore: walletAssembly.walletStore,
       walletBalanceLoader: loadersAssembly.walletBalanceLoader,
+      nftsStore: storesAssembly.nftsStore,
+      nftsLoader: loadersAssembly.nftsLoader,
       tonRatesLoader: loadersAssembly.tonRatesLoader,
       currencyStore: storesAssembly.currencyStore,
       backgroundUpdateStore: storesAssembly.backgroundUpdateStore
@@ -248,16 +250,19 @@ public final class MainAssembly {
   public func collectiblesController() -> CollectiblesController {
     CollectiblesController(
       walletsStore: walletAssembly.walletStore,
-      backgroundUpdateStore: storesAssembly.backgroundUpdateStore
+      backgroundUpdateStore: storesAssembly.backgroundUpdateStore,
+      nftsStore: storesAssembly.nftsStore
     )
   }
   
   public func collectiblesListController(wallet: Wallet) -> CollectiblesListController {
     CollectiblesListController(
+      wallet: wallet,
       nftsListPaginator: NftsListPaginator(
         wallet: wallet,
         accountNftsService: servicesAssembly.accountNftService()
-      )
+      ),
+      nftsStore: storesAssembly.nftsStore
     )
   }
   

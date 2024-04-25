@@ -46,7 +46,7 @@ final class ActiveWalletsServiceImplementation: ActiveWalletsService {
         taskGroup.addTask {
           async let accountTask = self.api.getAccountInfo(address: address.toRaw())
           async let jettonsBalanceTask = self.jettonsBalanceService.loadJettonsBalance(address: address, currency: (try? currencyService.getActiveCurrency()) ?? .USD )
-          async let nftsTask = self.accountNFTService.loadAccountNFTs(accountAddress: address, collectionAddress: nil, limit: 5, offset: 0, isIndirectOwnership: true)
+          async let nftsTask = self.accountNFTService.loadAccountNFTs(accountAddress: address, collectionAddress: nil, limit: nil, offset: nil, isIndirectOwnership: true)
           
           let isActive: Bool
           let balance: Balance

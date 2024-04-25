@@ -42,7 +42,7 @@ actor HistoryListPaginator {
   func start() async {
     state = .isLoading
     nextFrom = nil
-    if let cachedEvents = try? loader.cachedEvents(address: wallet.address) {
+    if let cachedEvents = try? loader.cachedEvents(address: wallet.address), !cachedEvents.events.isEmpty {
       await handleCachedEvents(cachedEvents)
       eventHandler?(.cached(sections))
     } else {

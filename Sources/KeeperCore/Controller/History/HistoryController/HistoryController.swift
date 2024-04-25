@@ -25,7 +25,7 @@ public final class HistoryController {
         switch event {
         case .didUpdateState(let backgroundUpdateState):
           observer.handleBackgroundUpdateState(backgroundUpdateState)
-        case .didReceiveUpdateEvent(let backgroundUpdateEvent):
+        case .didReceiveUpdateEvent:
           break
         }
       }

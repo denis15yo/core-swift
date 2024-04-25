@@ -92,30 +92,7 @@ public final class MainController {
     await startBackgroundUpdate()
   }
   
-  public func updateNfts() async {
-    await state.nftsUpdateTask?.cancel()
-    await state.setNftsUpdateTask(nil)
-    
-    let task = Task { [accountNFTService, walletsStore] in
-      if let cachedNfts = try? accountNFTService.getAccountNfts(accountAddress: walletsStore.activeWallet.address) {
-        didUpdateNftsAvailability?(!cachedNfts.isEmpty)
-      }
-      do {
-        let nfts = try await accountNFTService.loadAccountNFTs(
-          accountAddress: walletsStore.activeWallet.address,
-          collectionAddress: nil,
-          limit: 10,
-          offset: 0,
-          isIndirectOwnership: true
-        )
-        guard !Task.isCancelled else { return }
-        didUpdateNftsAvailability?(!nfts.isEmpty)
-      } catch {
-        didUpdateNftsAvailability?(false)
-      }
-    }
-    await state.setNftsUpdateTask(task)
-  }
+  public func updateNfts() async {}
   
   public func startBackgroundUpdate() async {
     await backgroundUpdateStore.start(addresses: walletsStore.wallets.compactMap { try? $0.address })

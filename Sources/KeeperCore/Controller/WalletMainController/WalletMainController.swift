@@ -8,17 +8,23 @@ public final class WalletMainController {
   
   private let walletsStore: WalletsStore
   private let walletBalanceLoader: WalletBalanceLoader
+  private let nftsStore: NftsStore
+  private let nftsLoader: NftsLoader
   private let tonRatesLoader: TonRatesLoader
   private let currencyStore: CurrencyStore
   private let backgroundUpdateStore: BackgroundUpdateStore
   
   init(walletsStore: WalletsStore, 
        walletBalanceLoader: WalletBalanceLoader,
+       nftsStore: NftsStore,
+       nftsLoader: NftsLoader,
        tonRatesLoader: TonRatesLoader,
        currencyStore: CurrencyStore,
        backgroundUpdateStore: BackgroundUpdateStore) {
     self.walletsStore = walletsStore
     self.walletBalanceLoader = walletBalanceLoader
+    self.nftsStore = nftsStore
+    self.nftsLoader = nftsLoader
     self.tonRatesLoader = tonRatesLoader
     self.currencyStore = currencyStore
     self.backgroundUpdateStore = backgroundUpdateStore
@@ -103,6 +109,7 @@ private extension WalletMainController {
     let currency = await currencyStore.getActiveCurrency()
     Task { await loadWalletsBalances(wallets: walletsStore.wallets, currency: currency) }
     Task { await loadTonRates(currency: currency) }
+    Task { await loadWalletsNfts(wallets: walletsStore.wallets) }
   }
   
   func loadWalletsBalances(wallets: [Wallet], currency: Currency) async {
@@ -116,6 +123,22 @@ private extension WalletMainController {
       for address in addresses {
         group.addTask {
           await walletBalanceLoader.loadBalance(walletAddress: address, currency: currency)
+        }
+      }
+    }
+  }
+  
+  func loadWalletsNfts(wallets: [Wallet]) async {
+    let addresses = wallets.compactMap { try? $0.address }
+    await loadWalletsNfts(addresses: addresses)
+  }
+  
+  func loadWalletsNfts(addresses: [Address]) async {
+    
+    await withTaskGroup(of: Void.self) { [nftsLoader] group in
+      for address in addresses {
+        group.addTask {
+          await nftsLoader.loadNfts(address: address)
         }
       }
     }

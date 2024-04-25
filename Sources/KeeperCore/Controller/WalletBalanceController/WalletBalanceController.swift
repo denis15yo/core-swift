@@ -18,7 +18,7 @@ public final class WalletBalanceController {
   actor BalanceState {
     var walletBalance: WalletBalance?
     
-    func setWalletBalance(_ walletBalance: WalletBalance) {
+    func setWalletBalance(_ walletBalance: WalletBalance?) {
       self.walletBalance = walletBalance
     }
   }
@@ -169,6 +169,8 @@ private extension WalletBalanceController {
   func setInitialState() async {
     if let totalBalanceState = try? await walletTotalBalanceStore.getTotalBalanceState(walletAddress: wallet.address) {
       await state.setTotalBalanceState(totalBalanceState)
+    } else {
+      await state.setTotalBalanceState(nil)
     }
     await state.setBackgroundUpdateState(await backgroundUpdateStore.state)
     let model = await getStateModel()
@@ -176,6 +178,8 @@ private extension WalletBalanceController {
     
     if let walletBalanceState = try? await walletBalanceStore.getBalanceState(walletAddress: wallet.address) {
       await balanceState.setWalletBalance(walletBalanceState.walletBalance)
+    } else {
+      await balanceState.setWalletBalance(nil)
     }
     let balanceModel = await getBalanceModel()
     didUpdateBalanceState?(balanceModel)

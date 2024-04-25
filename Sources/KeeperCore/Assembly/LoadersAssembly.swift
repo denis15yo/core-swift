@@ -37,4 +37,17 @@ public final class LoadersAssembly {
     _tonRatesLoader = loader
     return loader
   }
+  
+  private weak var _nftsLoader: NftsLoader?
+  var nftsLoader: NftsLoader {
+    if let _nftsLoader {
+      return _nftsLoader
+    }
+    let loader = NftsLoader(
+      nftsStore: storesAssembly.nftsStore,
+      nftsService: servicesAssembly.accountNftService()
+    )
+    _nftsLoader = loader
+    return loader
+  }
 }

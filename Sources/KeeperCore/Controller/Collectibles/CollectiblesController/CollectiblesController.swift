@@ -4,14 +4,18 @@ public final class CollectiblesController {
   
   public var didUpdateIsConnecting: ((Bool) -> Void)?
   public var didUpdateActiveWallet: (() -> Void)?
+  public var didUpdateIsEmpty: ((Bool) -> Void)?
 
   private let walletsStore: WalletsStore
   private let backgroundUpdateStore: BackgroundUpdateStore
+  private let nftsStore: NftsStore
   
   init(walletsStore: WalletsStore,
-       backgroundUpdateStore: BackgroundUpdateStore) {
+       backgroundUpdateStore: BackgroundUpdateStore,
+       nftsStore: NftsStore) {
     self.walletsStore = walletsStore
     self.backgroundUpdateStore = backgroundUpdateStore
+    self.nftsStore = nftsStore
   }
   
   public var wallet: Wallet {
@@ -22,7 +26,7 @@ public final class CollectiblesController {
     _ = walletsStore.addEventObserver(self) { observer, event in
       switch event {
       case .didUpdateActiveWallet:
-        observer.didChangeActiveWallet()
+        Task { await observer.didChangeActiveWallet() }
       default: break
       }
     }
@@ -35,6 +39,19 @@ public final class CollectiblesController {
         break
       }
     }
+    
+    _ = await nftsStore.addEventObserver(self) { observer, event in
+      switch event {
+      case .nftsUpdate(let nfts, let walletAddress):
+        guard let address = try? observer.wallet.address, address == walletAddress else { return }
+        observer.didUpdateIsEmpty?(nfts.isEmpty)
+      }
+    }
+    
+    if let address = try? wallet.address {
+      let nfts = await nftsStore.getNfts(walletAddress: address)
+      didUpdateIsEmpty?(nfts.isEmpty)
+    }
   }
   
   public func updateConnectingState() async {
@@ -44,8 +61,11 @@ public final class CollectiblesController {
 }
 
 private extension CollectiblesController {
-  func didChangeActiveWallet() {
+  func didChangeActiveWallet() async {
+    guard let address = try? wallet.address else { return }
+    let walletNfts = await nftsStore.getNfts(walletAddress: address)
     didUpdateActiveWallet?()
+    didUpdateIsEmpty?(walletNfts.isEmpty)
   }
   
   func handleBackgroundUpdateState(_ state: BackgroundUpdateState) {

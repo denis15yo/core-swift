@@ -40,6 +40,7 @@ final class WalletStoreWalletListControllerConfigurator: WalletListControllerCon
   
   func selectWallet(at index: Int) {
     guard index < walletsStore.wallets.count else { return }
+    guard walletsStore.wallets[index] != walletsStore.activeWallet else { return }
     do {
       try walletsStoreUpdate.makeWalletActive(walletsStore.wallets[index])
     } catch {
