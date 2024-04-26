@@ -91,7 +91,10 @@ public final class ServicesAssembly {
   }
   
   func chartService() -> ChartService {
-    ChartServiceImplementation(api: tonkeeperAPIAssembly.api)
+    ChartServiceImplementation(
+      api: apiAssembly.api,
+      repository: repositoriesAssembly.chartDataRepository()
+    )
   }
   
   func securityService() -> SecurityService {

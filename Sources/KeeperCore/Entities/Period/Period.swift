@@ -14,7 +14,7 @@ public enum Period: CaseIterable {
     case .day:
       return calendar.date(byAdding: DateComponents(day: -1), to: Date())!
     case .halfYear:
-      return calendar.date(byAdding: DateComponents(year: -6), to: Date())!
+      return calendar.date(byAdding: DateComponents(month: -6), to: Date())!
     case .hour:
       return calendar.date(byAdding: DateComponents(hour: -1), to: Date())!
     case .month:

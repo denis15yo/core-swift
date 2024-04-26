@@ -228,6 +228,16 @@ public final class MainAssembly {
     )
   }
   
+  public func chartV2Controller(token: Token) -> ChartV2Controller {
+    ChartV2Controller(
+      token: token,
+      loader: loadersAssembly.chartLoader,
+      chartService: servicesAssembly.chartService(),
+      currencyStore: storesAssembly.currencyStore,
+      decimalAmountFormatter: formattersAssembly.decimalAmountFormatter
+    )
+  }
+  
   public func receiveController(token: Token) -> ReceiveController {
     ReceiveController(
       token: token,

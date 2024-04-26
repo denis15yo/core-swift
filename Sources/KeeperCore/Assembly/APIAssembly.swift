@@ -1,6 +1,4 @@
 import Foundation
-
-import Foundation
 import TonAPI
 import TonStreamingAPI
 import TonConnectAPI
@@ -19,7 +17,13 @@ final class APIAssembly {
   // MARK: - Internal
   
   var api: API {
-    API(tonAPIClient: tonAPIClient())
+    API(
+      tonAPIClient: tonAPIClient(),
+      urlSession: URLSession(
+        configuration: urlSessionConfiguration
+      ),
+      configurationStore: configurationAssembly.remoteConfigurationStore
+    )
   }
   
   private var _tonAPIClient: TonAPI.Client?

@@ -50,4 +50,8 @@ public final class LoadersAssembly {
     _nftsLoader = loader
     return loader
   }
+  
+  var chartLoader: ChartV2Loader {
+    ChartV2Loader(chartService: servicesAssembly.chartService())
+  }
 }

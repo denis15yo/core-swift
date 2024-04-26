@@ -6,9 +6,15 @@ import OpenAPIRuntime
 
 struct API {
   private let tonAPIClient: TonAPI.Client
+  private let urlSession: URLSession
+  private let configurationStore: ConfigurationStore
   
-  init(tonAPIClient: TonAPI.Client) {
+  init(tonAPIClient: TonAPI.Client,
+       urlSession: URLSession,
+       configurationStore: ConfigurationStore) {
     self.tonAPIClient = tonAPIClient
+    self.urlSession = urlSession
+    self.configurationStore = configurationStore
   }
 }
 
@@ -270,6 +276,46 @@ extension API {
     let entity = try response.ok.body.json
     guard let expiringAt = entity.expiring_at else { return nil }
     return Date(timeIntervalSince1970: TimeInterval(integerLiteral: Int64(expiringAt)))
+  }
+}
+
+extension API {
+  private struct ChartResponse: Decodable {
+    let coordinates: [Coordinate]
+    
+    enum CodingKeys: String, CodingKey {
+      case points
+    }
+    
+    init(from decoder: any Decoder) throws {
+      let container = try decoder.container(keyedBy: CodingKeys.self)
+      let points = try container.decode([[Double]].self, forKey: .points)
+      let coordinates = points.compactMap { item -> Coordinate? in
+        guard item.count == 2 else { return nil }
+        return Coordinate(x: item[0], y: item[1])
+      }
+      self.coordinates = coordinates
+    }
+  }
+  
+  func getChart(token: String, period: Period, currency: Currency) async throws -> [Coordinate] {
+    let configuration = try await configurationStore.getConfiguration()
+    guard var components = URLComponents(string: configuration.tonapiV2Endpoint) else { return [] }
+    components.path = "/v2/rates/chart"
+    components.queryItems = [
+      URLQueryItem(name: "token", value: token),
+      URLQueryItem(name: "currency", value: currency.code),
+      URLQueryItem(name: "start_date", value: "\(Int(period.startDate.timeIntervalSince1970))"),
+      URLQueryItem(name: "end_date", value: "\(Int(period.endDate.timeIntervalSince1970))")
+    ]
+    
+    guard let url = components.url else { return [] }
+    let token = try await configurationStore.getConfiguration().tonApiV2Key
+    var request = URLRequest(url: url)
+    request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+    let (data, response) = try await urlSession.data(for: request)
+    let chartResponse = try JSONDecoder().decode(ChartResponse.self, from: data)
+    return chartResponse.coordinates.reversed()
   }
 }
 

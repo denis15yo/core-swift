@@ -32,7 +32,7 @@ public final class ChartController {
     }
   }
   
-  public func getChartData(period: Period) async throws -> [Coordinate] {
+  public func loadChartData(period: Period) async throws -> [Coordinate] {
     loadChartDataTask?.cancel()
     let currency = await currencyStore.getActiveCurrency()
     let task = Task {
@@ -56,6 +56,10 @@ public final class ChartController {
     self.coordinates = try await task.value
     return self.coordinates
   }
+  
+//  public func getChartData(period: Period) -> [Coordinate] {
+//    let currency = await currencyStore.getActiveCurrency()
+//  }
   
   public func getInformation(at index: Int, period: Period) async -> ChartPointInformationModel {
     guard index < coordinates.count else {
