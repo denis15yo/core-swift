@@ -1,17 +1,17 @@
 import Foundation
 import BigInt
 
-struct AmountFormatter {
+public struct AmountFormatter {
   private let bigIntFormatter: BigIntAmountFormatter
   
   init(bigIntFormatter: BigIntAmountFormatter) {
     self.bigIntFormatter = bigIntFormatter
   }
   
-  func formatAmount(_ amount: BigUInt,
-                    fractionDigits: Int,
-                    maximumFractionDigits: Int,
-                    currency: Currency? = nil) -> String {
+  public func formatAmount(_ amount: BigUInt,
+                           fractionDigits: Int,
+                           maximumFractionDigits: Int,
+                           currency: Currency? = nil) -> String {
     var formatted = bigIntFormatter.format(
       amount: amount,
       fractionDigits: fractionDigits,
@@ -28,10 +28,10 @@ struct AmountFormatter {
     return formatted
   }
   
-  func formatAmountWithoutFractionIfThousand(_ amount: BigUInt,
-                                             fractionDigits: Int,
-                                             maximumFractionDigits: Int,
-                                             currency: Currency? = nil) -> String {
+  public func formatAmountWithoutFractionIfThousand(_ amount: BigUInt,
+                                                    fractionDigits: Int,
+                                                    maximumFractionDigits: Int,
+                                                    currency: Currency? = nil) -> String {
     let isMoreThanThousand = isMoreThanThousand(amount: amount, fractionalDigits: fractionDigits)
     let maximumFractionDigits = isMoreThanThousand ? 0 : maximumFractionDigits
     return formatAmount(
@@ -42,10 +42,10 @@ struct AmountFormatter {
     )
   }
   
-  func formatAmount(_ amount: BigUInt,
-                    fractionDigits: Int,
-                    maximumFractionDigits: Int,
-                    symbol: String?) -> String {
+  public func formatAmount(_ amount: BigUInt,
+                           fractionDigits: Int,
+                           maximumFractionDigits: Int,
+                           symbol: String?) -> String {
     var formatted = bigIntFormatter.format(
       amount: amount,
       fractionDigits: fractionDigits,

@@ -18,8 +18,8 @@ public final class MainAssembly {
   let walletAssembly: WalletAssembly
   public let walletUpdateAssembly: WalletsUpdateAssembly
   let servicesAssembly: ServicesAssembly
-  let storesAssembly: StoresAssembly
-  let formattersAssembly: FormattersAssembly
+  public let storesAssembly: StoresAssembly
+  public let formattersAssembly: FormattersAssembly
   let configurationAssembly: ConfigurationAssembly
   public let passcodeAssembly: PasscodeAssembly
   public let tonConnectAssembly: TonConnectAssembly

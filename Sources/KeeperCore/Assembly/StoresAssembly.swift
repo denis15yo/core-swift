@@ -91,7 +91,7 @@ public final class StoresAssembly {
   }
   
   private weak var _currencyStore: CurrencyStore?
-  var currencyStore: CurrencyStore {
+  public var currencyStore: CurrencyStore {
     if let currencyStore = _currencyStore {
       return currencyStore
     } else {

@@ -9,16 +9,16 @@ import Foundation
 import BigInt
 import WalletCoreCore
 
-struct DecimalAmountFormatter {
+public struct DecimalAmountFormatter {
   private let numberFormatter: NumberFormatter
   
   init(numberFormatter: NumberFormatter) {
     self.numberFormatter = numberFormatter
   }
   
-  func format(amount: Decimal,
-              maximumFractionDigits: Int? = nil,
-              currency: Currency? = nil) -> String {
+  public func format(amount: Decimal,
+                     maximumFractionDigits: Int? = nil,
+                     currency: Currency? = nil) -> String {
     let formatterMaximumFractionDigits: Int = maximumFractionDigits ?? calculateFractionalDigitsCount(amount: amount, maximumNotZeroFractionalCount: 2)
     let formatFractional: String
     if formatterMaximumFractionDigits == 0 {

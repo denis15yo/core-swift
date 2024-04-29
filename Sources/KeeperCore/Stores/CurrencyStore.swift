@@ -1,8 +1,8 @@
 import Foundation
 
-actor CurrencyStore {
-  typealias ObservationClosure = (Event) -> Void
-  enum Event {
+public actor CurrencyStore {
+  public typealias ObservationClosure = (Event) -> Void
+  public enum Event {
     case didChangeCurrency(currency: Currency)
   }
   
@@ -12,7 +12,7 @@ actor CurrencyStore {
     self.currencyService = currencyService
   }
   
-  func setActiveCurrency(_ currency: Currency) {
+  public func setActiveCurrency(_ currency: Currency) {
     do {
       try currencyService.setActiveCurrency(currency)
       observations
@@ -21,7 +21,7 @@ actor CurrencyStore {
     } catch {}
   }
   
-  func getActiveCurrency() -> Currency {
+  public func getActiveCurrency() -> Currency {
     do {
       return try currencyService.getActiveCurrency()
     } catch {
@@ -31,7 +31,7 @@ actor CurrencyStore {
   
   private var observations = [UUID: ObservationClosure]()
   
-  func addEventObserver<T: AnyObject>(_ observer: T,
+  public func addEventObserver<T: AnyObject>(_ observer: T,
                                       closure: @escaping (T, Event) -> Void) -> ObservationToken {
     let id = UUID()
     let eventHandler: (Event) -> Void = { [weak self, weak observer] event in

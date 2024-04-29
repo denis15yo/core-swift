@@ -63,6 +63,7 @@ struct WalletBalanceMapper {
     var price: String?
     var convertedAmount: String?
     var diff: String?
+    
     if let rate = tonRates.first(where: { $0.currency == currency }) {
       let converted = rateConverter.convert(
         amount: bigUIntAmount,
@@ -91,7 +92,8 @@ struct WalletBalanceMapper {
       rateDiff: diff,
       amount: amount,
       convertedAmount: convertedAmount,
-      verification: .whitelist)
+      verification: .whitelist,
+      hasPrice: true)
   }
   
   func mapJettons(jettonsBalance: [JettonBalance],
@@ -132,6 +134,7 @@ struct WalletBalanceMapper {
     var price: String?
     var convertedAmount: String?
     var diff: String?
+    var hasPrice = false
     if let rate = jettonBalance.rates[currency] {
       let converted = rateConverter.convert(
         amount: jettonBalance.quantity,
@@ -149,6 +152,7 @@ struct WalletBalanceMapper {
         currency: currency
       )
       diff = rate.diff24h == "0" ? nil : rate.diff24h
+      hasPrice = !rate.rate.isZero
     }
     return WalletBalanceItemsModel.Item(
       identifier: jettonBalance.item.jettonInfo.address.toRaw(),
@@ -159,7 +163,8 @@ struct WalletBalanceMapper {
       rateDiff: diff,
       amount: amount,
       convertedAmount: convertedAmount,
-      verification: jettonBalance.item.jettonInfo.verification
+      verification: jettonBalance.item.jettonInfo.verification,
+      hasPrice: hasPrice
     )
   }
 }

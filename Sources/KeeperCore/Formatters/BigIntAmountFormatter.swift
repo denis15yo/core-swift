@@ -1,15 +1,15 @@
 import Foundation
 import BigInt
 
-struct BigIntAmountFormatter {
+public struct BigIntAmountFormatter {
   
   enum Error: Swift.Error {
     case invalidInput(_ input: String)
   }
   
-  func format(amount: BigUInt,
-              fractionDigits: Int,
-              maximumFractionDigits: Int) -> String {
+  public func format(amount: BigUInt,
+                     fractionDigits: Int,
+                     maximumFractionDigits: Int) -> String {
     guard !amount.isZero else { return "0" }
     let initialString = amount.description
     if initialString.count < fractionDigits {
@@ -33,7 +33,7 @@ struct BigIntAmountFormatter {
     }
   }
   
-  func bigInt(string: String, targetFractionalDigits: Int) throws -> (amount: BigInt, fractionalDigits: Int) {
+  public func bigInt(string: String, targetFractionalDigits: Int) throws -> (amount: BigInt, fractionalDigits: Int) {
     guard !string.isEmpty else { throw Error.invalidInput(string) }
     let fractionalSeparator: String = .fractionalSeparator ?? ""
     let components = string.components(separatedBy: fractionalSeparator)

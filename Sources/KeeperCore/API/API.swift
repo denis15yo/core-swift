@@ -280,6 +280,12 @@ extension API {
 }
 
 extension API {
+  
+  enum APIError: Swift.Error {
+    case incorrectResponse
+    case serverError(statusCode: Int)
+  }
+  
   private struct ChartResponse: Decodable {
     let coordinates: [Coordinate]
     
@@ -314,6 +320,12 @@ extension API {
     var request = URLRequest(url: url)
     request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     let (data, response) = try await urlSession.data(for: request)
+    guard let httpResponse = (response as? HTTPURLResponse) else {
+      throw APIError.incorrectResponse
+    }
+    guard (200..<300).contains(httpResponse.statusCode) else {
+      throw APIError.serverError(statusCode: httpResponse.statusCode)
+    }
     let chartResponse = try JSONDecoder().decode(ChartResponse.self, from: data)
     return chartResponse.coordinates.reversed()
   }

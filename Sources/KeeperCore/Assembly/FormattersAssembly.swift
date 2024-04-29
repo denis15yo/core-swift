@@ -1,15 +1,15 @@
 import Foundation
 
-final class FormattersAssembly {
-  var amountFormatter: AmountFormatter {
+public final class FormattersAssembly {
+  public var amountFormatter: AmountFormatter {
     AmountFormatter(bigIntFormatter: bigIntAmountFormatter)
   }
   
-  var bigIntAmountFormatter: BigIntAmountFormatter {
+  public var bigIntAmountFormatter: BigIntAmountFormatter {
     BigIntAmountFormatter()
   }
   
-  var shortNumberFormatter: NumberFormatter {
+  public var shortNumberFormatter: NumberFormatter {
     let formatter = NumberFormatter()
     formatter.groupingSeparator = " "
     formatter.groupingSize = 3
@@ -19,11 +19,11 @@ final class FormattersAssembly {
     return formatter
   }
   
-  var decimalAmountFormatter: DecimalAmountFormatter {
+  public var decimalAmountFormatter: DecimalAmountFormatter {
     DecimalAmountFormatter(numberFormatter: shortNumberFormatter)
   }
   
-  var dateFormatter: DateFormatter {
+  public var dateFormatter: DateFormatter {
     let dateFormatter = DateFormatter()
     dateFormatter.locale = Locale.init(identifier: "EN")
     return dateFormatter

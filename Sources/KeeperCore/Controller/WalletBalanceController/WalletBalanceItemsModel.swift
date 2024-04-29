@@ -21,5 +21,6 @@ public extension WalletBalanceItemsModel {
     public let amount: String?
     public let convertedAmount: String?
     public let verification: JettonInfo.Verification
+    public let hasPrice: Bool
   }
 }

@@ -59,14 +59,14 @@ actor WalletBalanceStore {
   }
 }
 
-class ObservationToken {
+public class ObservationToken {
   private let cancellationClosure: () -> Void
   
   init(cancellationClosure: @escaping () -> Void) {
     self.cancellationClosure = cancellationClosure
   }
   
-  func cancel() {
+  public func cancel() {
     cancellationClosure()
   }
 }
