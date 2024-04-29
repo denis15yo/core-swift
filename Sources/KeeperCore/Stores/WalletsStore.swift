@@ -1,9 +1,9 @@
 import Foundation
 import CoreComponents
 
-final class WalletsStore {
-  typealias ObservationClosure = (Event) -> Void
-  enum Event {
+public final class WalletsStore {
+  public typealias ObservationClosure = (Event) -> Void
+  public enum Event {
     case didAddWallets([Wallet])
     case didUpdateActiveWallet
     case didUpdateWalletMetadata(Wallet)
@@ -49,8 +49,8 @@ final class WalletsStore {
 
   private var observations = [UUID: ObservationClosure]()
   
-  func addEventObserver<T: AnyObject>(_ observer: T,
-                                      closure: @escaping (T, Event) -> Void) -> ObservationToken {
+  public func addEventObserver<T: AnyObject>(_ observer: T,
+                                             closure: @escaping (T, Event) -> Void) -> ObservationToken {
     let id = UUID()
     let eventHandler: (Event) -> Void = { [weak self, weak observer] event in
       guard let self else { return }

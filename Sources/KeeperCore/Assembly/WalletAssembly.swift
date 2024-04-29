@@ -6,7 +6,7 @@ public final class WalletAssembly {
   private let storesAssembly: StoresAssembly
   private let walletUpdateAssembly: WalletsUpdateAssembly
   
-  let walletStore: WalletsStore
+  public let walletStore: WalletsStore
   
   init(servicesAssembly: ServicesAssembly,
        storesAssembly: StoresAssembly,

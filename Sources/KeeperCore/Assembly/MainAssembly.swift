@@ -15,7 +15,7 @@ public final class MainAssembly {
   }
   
   let repositoriesAssembly: RepositoriesAssembly
-  let walletAssembly: WalletAssembly
+  public let walletAssembly: WalletAssembly
   public let walletUpdateAssembly: WalletsUpdateAssembly
   let servicesAssembly: ServicesAssembly
   public let storesAssembly: StoresAssembly
@@ -335,6 +335,18 @@ public final class MainAssembly {
       balanceStore: storesAssembly.balanceStore,
       knownAccountsStore: storesAssembly.knownAccountsStore,
       dnsService: servicesAssembly.dnsService(),
+      amountFormatter: formattersAssembly.amountFormatter
+    )
+  }
+  
+  public func sendV3Controller() -> SendV3Controller {
+    SendV3Controller(
+      walletsStore: walletAssembly.walletStore,
+      walletBalanceStore: storesAssembly.walletBalanceStore,
+      knownAccountsStore: storesAssembly.knownAccountsStore,
+      dnsService: servicesAssembly.dnsService(),
+      tonRatesStore: storesAssembly.tonRatesStore,
+      currencyStore: storesAssembly.currencyStore,
       amountFormatter: formattersAssembly.amountFormatter
     )
   }
