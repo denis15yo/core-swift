@@ -21,13 +21,9 @@ public final class HistoryListController {
   
   public func start() async {
     didSendTransactionToken = NotificationCenter.default.addObserver(
-      forName: NSNotification.Name(rawValue: "didSendTransaction"),
+      forName: NSNotification.Name(rawValue: "DID SEND TRANSACTION"),
       object: nil,
-      queue: nil) { [wallet, weak self] notification in
-        guard let notificationWallet = notification.userInfo?["Wallet"] as? Wallet,
-        let notificationWalletAddress = try? notificationWallet.address,
-        let walletAddress = try? wallet.address,
-        notificationWalletAddress == walletAddress else { return }
+      queue: nil) { [weak self] notification in
         self?.didReceiveDidSendTransactionNotification()
       }
     
