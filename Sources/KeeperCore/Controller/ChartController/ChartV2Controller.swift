@@ -37,6 +37,14 @@ public final class ChartV2Controller {
     )
     return coordinates
   }
+  
+  public func calculateDiff(coordinates: [Coordinate],
+                            coordinate: Coordinate) -> (diff: Double, currencyDiff: Double) {
+    guard let startCoordinate = coordinates.first else { return (0, 0) }
+    let diff = (coordinate.y / startCoordinate.y - 1) * 100
+    let currencyDiff = (coordinate.y - startCoordinate.y)
+    return (diff, currencyDiff)
+  }
 }
 
 private extension Token {

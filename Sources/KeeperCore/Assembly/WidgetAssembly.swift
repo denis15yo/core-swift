@@ -46,4 +46,14 @@ public final class WidgetAssembly {
       amountFormatter: formattersAssembly.amountFormatter
     )
   }
+  
+  public func chartV2Controller(token: Token) -> ChartV2Controller {
+    ChartV2Controller(
+      token: token,
+      loader: loadersAssembly.chartLoader,
+      chartService: servicesAssembly.chartService(),
+      currencyStore: storesAssembly.currencyStore,
+      decimalAmountFormatter: formattersAssembly.decimalAmountFormatter
+    )
+  }
 }

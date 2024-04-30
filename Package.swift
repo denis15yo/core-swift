@@ -8,9 +8,7 @@ let package = Package(
     .macOS(.v12), .iOS(.v14)
   ],
   products: [
-    .library(name: "WalletCore", type: .dynamic, targets: ["WalletCore", "KeeperCore"]),
-    .library(name: "WalletCoreCore", targets: ["WalletCoreCore"]),
-    .library(name: "WalletCoreKeeper", targets: ["WalletCoreKeeper"])
+    .library(name: "WalletCore", type: .dynamic, targets: ["KeeperCore"]),
   ],
   dependencies: [
     .package(url: "https://github.com/tonkeeper/ton-swift", from: "1.0.6"),
@@ -45,33 +43,6 @@ let package = Package(
                 dependencies: [
                   "KeeperCore"
                 ]),
-    .target(name: "WalletCore",
-            dependencies: [
-              .target(name: "WalletCoreCore"),
-              .target(name: "WalletCoreKeeper")
-            ]),
-    .target(name: "WalletCoreCore",
-            dependencies: [.product(name: "TonSwift", package: "ton-swift")],
-            path: "Sources/WalletCoreCore"),
-    .testTarget(name: "WalletCoreCoreTests",
-                dependencies: ["WalletCoreCore"],
-                path: "Tests/WalletCoreCoreTests"),
-    .target(name: "WalletCoreKeeper",
-            dependencies: [
-              .target(name: "WalletCoreCore"),
-              .target(name: "TonConnectAPI"),
-              .product(name: "TonSwift", package: "ton-swift"),
-              .product(name: "TonAPI", package: "ton-api-swift"),
-              .product(name: "TonStreamingAPI", package: "ton-api-swift"),
-              .product(name: "StreamURLSessionTransport", package: "ton-api-swift"),
-              .product(name: "EventSource", package: "ton-api-swift"),
-            ],
-            path: "Sources/WalletCoreKeeper",
-            resources: [.copy("PackageResources")]),
-    .testTarget(name: "WalletCoreKeeperTests",
-                dependencies: ["WalletCoreKeeper"],
-                path: "Tests/WalletCoreKeeperTests",
-                resources: [.copy("PackageResources")]),
     .target(name: "TonConnectAPI",
             dependencies: [
               .product(

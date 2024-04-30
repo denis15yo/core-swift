@@ -1,6 +1,5 @@
 import Foundation
 import BigInt
-import WalletCoreCore
 
 protocol AccountEventRightTopDescriptionProvider {
   mutating func rightTopDescription(accountEvent: AccountEvent,

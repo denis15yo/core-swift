@@ -5,7 +5,7 @@ public final class RootAssembly {
   private let servicesAssembly: ServicesAssembly
   private let storesAssembly: StoresAssembly
   private let coreAssembly: CoreAssembly
-  private let formattersAssembly: FormattersAssembly
+  public  let formattersAssembly: FormattersAssembly
   private let walletsUpdateAssembly: WalletsUpdateAssembly
   private let configurationAssembly: ConfigurationAssembly
   private let passcodeAssembly: PasscodeAssembly

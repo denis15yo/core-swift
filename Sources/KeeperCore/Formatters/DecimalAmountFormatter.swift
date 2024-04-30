@@ -7,7 +7,6 @@
 
 import Foundation
 import BigInt
-import WalletCoreCore
 
 public struct DecimalAmountFormatter {
   private let numberFormatter: NumberFormatter
