@@ -20,4 +20,5 @@ public struct FiatMethodViewModel {
     public let iconURL: URL?
     public let actionButton: Button?
     public let infoButtons: [Button]
+    public let urlCaption: String?
 }

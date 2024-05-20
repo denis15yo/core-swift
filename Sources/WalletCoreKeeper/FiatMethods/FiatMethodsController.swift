@@ -59,6 +59,13 @@ private extension FiatMethodsController {
         let sections = fiatMethods.categories.compactMap { category -> [FiatMethodViewModel]? in
             let models = category.items.compactMap { item -> FiatMethodViewModel? in
                 guard availableFiatMethods.contains(item.id) else { return nil }
+              
+                var urlCaption: String?
+                urlCaption = URL(string: item.actionButton.url)?.host
+                if item.id.lowercased() == "moonpay" {
+                    urlCaption = "buy.moonpay.com"
+                }
+              
                 return FiatMethodViewModel(
                     id: item.id,
                     title: item.title,
@@ -66,7 +73,8 @@ private extension FiatMethodsController {
                     token: item.badge,
                     iconURL: item.iconURL,
                     actionButton: .init(title: item.actionButton.title, url: item.actionButton.url),
-                    infoButtons: item.infoButtons.map { .init(title: $0.title, url: $0.url) }
+                    infoButtons: item.infoButtons.map { .init(title: $0.title, url: $0.url) },
+                    urlCaption: urlCaption
                 )
             }
             guard !models.isEmpty else { return nil }
