@@ -21,7 +21,7 @@ extension TonConnect.ConnectEvent {
     }
 }
 
-extension TonConnect.ConnectItemReply {
+public extension TonConnect.ConnectItemReply {
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
@@ -33,7 +33,7 @@ extension TonConnect.ConnectItemReply {
     }
 }
 
-extension TonConnect.TonProofItemReply {
+public extension TonConnect.TonProofItemReply {
     func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
@@ -45,7 +45,7 @@ extension TonConnect.TonProofItemReply {
     }
 }
 
-extension TonConnect.TonAddressItemReply {
+public extension TonConnect.TonAddressItemReply {
     enum CodingKeys: String, CodingKey {
         case name
         case address

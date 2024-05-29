@@ -51,23 +51,18 @@ public final class TonConnectConfirmationController {
     }
     
     public func handleAppRequest(_ appRequest: TonConnect.AppRequest,
-                                 app: TonConnectApp) {
-        Task {
-            guard case .idle = await state.property else { return }
-            await state.setValue(.confirmation(appRequest, app: app))
-            emulateAppRequest(appRequest)
-        }
+                                 app: TonConnectApp) async {
+        guard case .idle = await state.property else { return }
+        await state.setValue(.confirmation(appRequest, app: app))
     }
 
-    public func didFinish() {
-        Task {
-            guard case .confirmation = await state.property else {
-                await state.setValue(.idle)
-                return
-            }
-            await cancelAppRequest()
+    public func didFinish() async throws {
+        guard case .confirmation = await state.property else {
             await state.setValue(.idle)
+            return
         }
+        try await cancelAppRequest()
+        await state.setValue(.idle)
     }
     
     public func confirmTransaction() async throws {
@@ -119,7 +114,7 @@ private extension TonConnectConfirmationController {
                     )
                 }
             } catch {
-                await cancelAppRequest()
+                Task { try await cancelAppRequest() }
                 await MainActor.run {
                     output?.tonConnectConfirmationControllerDidFinishEmulation(
                         self,
@@ -130,24 +125,22 @@ private extension TonConnectConfirmationController {
         }
     }
     
-    func cancelAppRequest() async {
+    func cancelAppRequest() async throws {
         guard case .confirmation(let appRequest, let app) = await state.property else { return }
         await state.setValue(.idle)
-        Task {
-            let sessionCrypto = try TonConnectSessionCrypto(privateKey: app.keyPair.privateKey)
-            let body = try TonConnectResponseBuilder.buildSendTransactionResponseError(
-                sessionCrypto: sessionCrypto,
-                errorCode: .userDeclinedTransaction,
-                id: appRequest.id,
-                clientId: app.clientId)
-            
-            _ = try await apiClient.message(
-                query: .init(client_id: sessionCrypto.sessionId,
-                             to: app.clientId,
-                             ttl: 300),
-                body: .plainText(.init(stringLiteral: body))
-            )
-        }
+        let sessionCrypto = try TonConnectSessionCrypto(privateKey: app.keyPair.privateKey)
+        let body = try TonConnectResponseBuilder.buildSendTransactionResponseError(
+            sessionCrypto: sessionCrypto,
+            errorCode: .userDeclinedTransaction,
+            id: appRequest.id,
+            clientId: app.clientId)
+        
+        _ = try await apiClient.message(
+            query: .init(client_id: sessionCrypto.sessionId,
+                         to: app.clientId,
+                         ttl: 300),
+            body: .plainText(.init(stringLiteral: body))
+        )
     }
     
     func emulate(appRequestParam: TonConnect.AppRequest.Param) async throws -> TonConnectConfirmationModel {

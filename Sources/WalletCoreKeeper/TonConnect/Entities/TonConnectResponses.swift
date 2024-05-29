@@ -16,21 +16,32 @@ extension TonConnect {
         case success(ConnectEventSuccess)
         case error(ConnectEventError)
     }
-    struct ConnectEventSuccess: Encodable {
-        struct Payload: Encodable {
+    public struct ConnectEventSuccess: Encodable {
+        public struct Payload: Encodable {
             let items: [ConnectItemReply]
             let device: DeviceInfo
+            
+            public init(items: [ConnectItemReply], device: DeviceInfo) {
+                self.items = items
+                self.device = device
+            }
         }
         let event = "connect"
         let id = Int(Date().timeIntervalSince1970)
         let payload: Payload
         
-        struct DeviceInfo: Encodable {
+        public init(payload: Payload) {
+            self.payload = payload
+        }
+        
+        public struct DeviceInfo: Encodable {
             let platform = "iphone"
-            let appName = "Tonkeeper"
-            let appVersion = "3.4.0"
+            let appName = "nicegramWallet"
+            let appVersion = "1.6.3"
             let maxProtocolVersion = 2
             let features = [Feature()]
+            
+            public init() {}
             
             struct Feature: Encodable {
                 let name = "SendTransaction"
@@ -38,12 +49,12 @@ extension TonConnect {
             }
         }
     }
-    struct ConnectEventError: Encodable {
+    public struct ConnectEventError: Encodable {
         struct Payload: Encodable {
             let code: Error
             let message: String
         }
-        enum Error: Int, Encodable {
+        public enum Error: Int, Encodable {
             case unknownError = 0
             case badRequest = 1
             case appManifestNotFound = 2
@@ -56,22 +67,29 @@ extension TonConnect {
         let payload: Payload
     }
     
-    enum ConnectItemReply: Encodable {
+    public enum ConnectItemReply: Encodable {
         case tonAddress(TonAddressItemReply)
         case tonProof(TonProofItemReply)
     }
-    struct TonAddressItemReply: Encodable {
+    public struct TonAddressItemReply: Encodable {
         let name = "ton_addr"
         let address: TonSwift.Address
         let network: Network
         let publicKey: TonSwift.PublicKey
         let walletStateInit: TonSwift.StateInit
+        
+        public init(address: TonSwift.Address, network: Network, publicKey: TonSwift.PublicKey, walletStateInit: TonSwift.StateInit) {
+            self.address = address
+            self.network = network
+            self.publicKey = publicKey
+            self.walletStateInit = walletStateInit
+        }
     }
-    enum TonProofItemReply: Encodable {
+    public enum TonProofItemReply: Encodable {
         case success(TonProofItemReplySuccess)
         case error(TonProofItemReplyError)
     }
-    struct TonProofItemReplySuccess: Encodable {
+    public struct TonProofItemReplySuccess: Encodable {
         struct Proof: Encodable {
             let timestamp: UInt64
             let domain: Domain
@@ -96,7 +114,7 @@ extension TonConnect {
         let proof: Proof
     }
     
-    struct TonProofItemReplyError: Encodable {
+    public struct TonProofItemReplyError: Encodable {
         struct Error: Encodable {
             let message: String?
             let code: ErrorCode
@@ -111,7 +129,7 @@ extension TonConnect {
     }
 }
 
-extension TonConnect.TonProofItemReplySuccess {
+public extension TonConnect.TonProofItemReplySuccess {
     init(address: TonSwift.Address,
          domain: String,
          payload: String,
@@ -147,9 +165,14 @@ extension TonConnect {
         case success(SendTransactionResponseSuccess)
         case error(SendTransactionResponseError)
     }
-    struct SendTransactionResponseSuccess: Encodable {
+    public struct SendTransactionResponseSuccess: Encodable {
         let result: String
         let id: String
+        
+        public init(result: String, id: String) {
+            self.result = result
+            self.id = id
+        }
     }
     struct SendTransactionResponseError: Encodable {
         struct Error: Encodable {

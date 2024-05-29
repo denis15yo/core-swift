@@ -7,8 +7,8 @@
 
 import Foundation
 
-struct TonConnectRequestPayload: Decodable {
-    enum Item: Decodable {
+public struct TonConnectRequestPayload: Decodable {
+    public enum Item: Decodable {
         case tonAddress
         case tonProof(payload: String)
         case unknown
@@ -18,7 +18,7 @@ struct TonConnectRequestPayload: Decodable {
             case payload
         }
         
-        init(from decoder: Decoder) throws {
+        public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             let name = try container.decode(String.self, forKey: .name)
             switch name {
@@ -33,6 +33,6 @@ struct TonConnectRequestPayload: Decodable {
         }
     }
     
-    let manifestUrl: URL
-    let items: [Item]
+    public let manifestUrl: URL
+    public let items: [Item]
 }

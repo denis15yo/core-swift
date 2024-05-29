@@ -135,6 +135,23 @@ public actor TonConnectController {
         notifyObservers()
     }
     
+    public func rejectConnection() async throws {
+        let sessionCrypto = try TonConnectSessionCrypto()
+        let body = try TonConnectResponseBuilder.buildConnectEventErrorResponse(
+            sessionCrypto: sessionCrypto,
+            errorCode: .userDeclinedTheConnection,
+            clientId: parameters.clientId
+        )
+        _ = try await apiClient.message(
+            query: .init(
+                client_id: sessionCrypto.sessionId,
+                to: parameters.clientId,
+                ttl: 300
+            ),
+            body: .plainText(.init(stringLiteral: body))
+        )
+    }
+    
     func addObserver(_ observer: TonConnectControllerObserver) {
         var observers = observers.filter { $0.observer != nil }
         observers.append(.init(observer: observer))

@@ -13,6 +13,8 @@ struct TonConnectUrlParser {
     }
     
     func parseString(_ string: String) throws -> TonConnectParameters {
+        let string = string.replacingPlusSignWithSpace()
+        
         guard
             let url = URL(string: string),
             let components = URLComponents(url: url, resolvingAgainstBaseURL: true),
@@ -40,4 +42,19 @@ private extension String {
     static let versionKey = "v"
     static let clientIdKey = "id"
     static let requestPayloadKey = "r"
+}
+
+private extension String {
+    func replacingPlusSignWithSpace() -> String {
+        guard var components = URLComponents(string: self) else {
+            return self
+        }
+        
+        components.query = components.query?.replacingOccurrences(
+            of: "+",
+            with: " "
+        )
+        
+        return components.string ?? self
+    }
 }

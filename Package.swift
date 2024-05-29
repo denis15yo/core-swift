@@ -3,26 +3,28 @@
 import PackageDescription
 
 let package = Package(
-    name: "WalletCore",
+    name: "TonKeeperWalletCore",
     platforms: [
         .macOS(.v12), .iOS(.v14)
     ],
     products: [
-        .library(name: "WalletCore", type: .dynamic, targets: ["WalletCore"]),
+        .library(name: "TonKeeperWalletCore", type: .dynamic, targets: ["TonKeeperWalletCore"]),
         .library(name: "WalletCoreCore", targets: ["WalletCoreCore"]),
         .library(name: "WalletCoreKeeper", targets: ["WalletCoreKeeper"])
     ],
     dependencies: [
-        .package(url: "https://github.com/tonkeeper/ton-swift", exact: "1.0.6"),
+        .package(url: "https://github.com/denis15yo/ton-swift.git", branch: "main"),
         .package(url: "https://github.com/tonkeeper/ton-api-swift", from: "0.1.1"),
         .package(url: "https://github.com/apple/swift-openapi-runtime", .upToNextMinor(from: "0.3.0"))
     ],
     targets: [
-        .target(name: "WalletCore",
+        .target(name: "TonKeeperWalletCore",
                 dependencies: [
                     .target(name: "WalletCoreCore"),
                     .target(name: "WalletCoreKeeper")
-                ]),
+                ],
+                path: "Sources/WalletCore"
+               ),
         .target(name: "WalletCoreCore",
                 dependencies: [.product(name: "TonSwift", package: "ton-swift")],
                 path: "Sources/WalletCoreCore"),

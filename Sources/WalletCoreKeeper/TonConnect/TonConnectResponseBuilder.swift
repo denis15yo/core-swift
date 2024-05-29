@@ -51,6 +51,29 @@ struct TonConnectResponseBuilder {
         return response.base64EncodedString()
     }
     
+    static func buildConnectEventErrorResponse(
+        sessionCrypto: TonConnectSessionCrypto,
+        errorCode: TonConnect.ConnectEventError.Error,
+        clientId: String
+    ) throws -> String {
+        let response = TonConnect.ConnectEventError(
+            payload: .init(
+                code: errorCode,
+                message: ""
+            )
+        )
+        
+        let transactionResponseData = try JSONEncoder().encode(response)
+        guard let receiverPublicKey = Data(hex: clientId) else { return "" }
+        
+        let encryptedTransactionResponse = try sessionCrypto.encrypt(
+            message: transactionResponseData,
+            receiverPublicKey: receiverPublicKey
+        )
+        
+        return encryptedTransactionResponse.base64EncodedString()
+    }
+    
     static func buildSendTransactionResponseSuccess(
         sessionCrypto: TonConnectSessionCrypto,
         boc: String,

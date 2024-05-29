@@ -41,7 +41,7 @@ public struct Wallet: Codable, Hashable {
         return []
     }
 
-    init(identity: WalletIdentity,
+    public init(identity: WalletIdentity,
          label: String = "",
          notificationSettings: NotificationSettings = .init(),
          backupSettings: WalletBackupSettings = .init(enabled: true, revision: 1, voucher: nil),

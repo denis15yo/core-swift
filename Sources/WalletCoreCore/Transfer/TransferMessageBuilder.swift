@@ -104,6 +104,7 @@ public struct TokenTransferMessageBuilder {
                                          seqno: UInt64,
                                          tokenAddress: Address,
                                          value: BigInt,
+                                         tonValue: BigInt? = nil,
                                          recipientAddress: Address,
                                          isBounceable: Bool = true,
                                          comment: String?,
@@ -116,6 +117,7 @@ public struct TokenTransferMessageBuilder {
                     let internalMessage = try JettonTransferMessage.internalMessage(
                         jettonAddress: tokenAddress,
                         amount: value,
+                        tonValue: tonValue,
                         bounce: isBounceable,
                         to: recipientAddress,
                         from: sender,

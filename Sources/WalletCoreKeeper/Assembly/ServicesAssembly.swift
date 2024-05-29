@@ -8,7 +8,7 @@
 import Foundation
 import TonAPI
 
-final class ServicesAssembly {
+public final class ServicesAssembly {
     let coreAssembly: CoreAssembly
     let apiAssembly: APIAssembly
     let legacyApiAssembly: LegacyAPIAssembly
@@ -41,8 +41,9 @@ final class ServicesAssembly {
         )
     }
     
+    public var _sendService: (() -> SendService)?
     var sendService: SendService {
-        SendServiceImplementation(api: apiAssembly.api)
+        _sendService?() ?? SendServiceImplementation(api: apiAssembly.api)   
     }
     
     var balanceService: BalanceService {

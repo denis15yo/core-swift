@@ -57,6 +57,15 @@ public struct TokenInfo: Codable, Equatable {
     public var description: String?
     public var imageURL: URL?
     
+    public init(address: Address, fractionDigits: Int, name: String, symbol: String? = nil, description: String? = nil, imageURL: URL? = nil) {
+        self.address = address
+        self.fractionDigits = fractionDigits
+        self.name = name
+        self.symbol = symbol
+        self.description = description
+        self.imageURL = imageURL
+    }
+    
     public static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.address == rhs.address
     }

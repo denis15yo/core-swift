@@ -22,4 +22,9 @@ public struct TokenTransferModel {
     
     public let transferItem: TransferItem
     public let amount: BigInt
+    
+    public init(transferItem: TransferItem, amount: BigInt) {
+        self.transferItem = transferItem
+        self.amount = amount
+    }
 }

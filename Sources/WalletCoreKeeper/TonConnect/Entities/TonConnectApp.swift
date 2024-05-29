@@ -19,7 +19,7 @@ struct TonConnectApps: Codable {
 }
 
 public struct TonConnectApp: Codable {
-    let clientId: String
-    let manifest: TonConnectManifest
-    let keyPair: TonSwift.KeyPair
+    public let clientId: String
+    public let manifest: TonConnectManifest
+    public let keyPair: TonSwift.KeyPair
 }

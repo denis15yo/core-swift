@@ -13,6 +13,6 @@ public struct TonConnectParameters {
     }
     
     let version: Version
-    let clientId: String
+    public let clientId: String
     let requestPayload: TonConnectRequestPayload
 }

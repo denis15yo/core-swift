@@ -10,14 +10,14 @@ import TonSwift
 
 public extension TonConnect {
     struct AppRequest: Decodable {
-        enum Method: String, Decodable {
+        public enum Method: String, Decodable {
             case sendTransaction
         }
         
-        struct Param: Decodable {
-            let messages: [Message]
-            let validUntil: TimeInterval
-            let from: Address?
+        public struct Param: Decodable {
+            public let messages: [Message]
+            public let validUntil: TimeInterval
+            public let from: Address?
             
             enum CodingKeys: String, CodingKey {
                 case messages
@@ -25,7 +25,7 @@ public extension TonConnect {
                 case from
             }
             
-            init(from decoder: Decoder) throws {
+            public init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 messages = try container.decode([Message].self, forKey: .messages)
                 validUntil = try container.decode(TimeInterval.self, forKey: .validUntil)
@@ -33,11 +33,11 @@ public extension TonConnect {
             }
         }
         
-        struct Message: Decodable {
-            let address: Address
-            let amount: Int64
-            let stateInit: String?
-            let payload: String?
+        public struct Message: Decodable {
+            public let address: Address
+            public let amount: Int64
+            public let stateInit: String?
+            public let payload: String?
             
             enum CodingKeys: String, CodingKey {
                 case address
@@ -46,7 +46,7 @@ public extension TonConnect {
                 case payload
             }
             
-            init(from decoder: Decoder) throws {
+            public init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 address = try Address.parse(try container.decode(String.self, forKey: .address))
                 amount = Int64(try container.decode(String.self, forKey: .amount)) ?? 0
@@ -55,9 +55,9 @@ public extension TonConnect {
             }
         }
         
-        let method: Method
-        let params: [Param]
-        let id: String
+        public let method: Method
+        public let params: [Param]
+        public let id: String
         
         enum CodingKeys: String, CodingKey {
             case method
