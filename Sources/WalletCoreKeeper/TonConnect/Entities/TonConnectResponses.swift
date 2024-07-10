@@ -90,28 +90,28 @@ extension TonConnect {
         case error(TonProofItemReplyError)
     }
     public struct TonProofItemReplySuccess: Encodable {
-        struct Proof: Encodable {
-            let timestamp: UInt64
-            let domain: Domain
-            let signature: Signature
-            let payload: String
-            let privateKey: PrivateKey
+        public struct Proof: Encodable {
+            public let timestamp: UInt64
+            public let domain: Domain
+            public let signature: Signature
+            public let payload: String
+            public let privateKey: PrivateKey
         }
         
-        struct Signature: Encodable {
-            let address: TonSwift.Address
-            let domain: Domain
-            let timestamp: UInt64
-            let payload: String
+        public struct Signature: Encodable {
+            public let address: TonSwift.Address
+            public let domain: Domain
+            public let timestamp: UInt64
+            public let payload: String
         }
         
-        struct Domain: Encodable {
-            let lengthBytes: UInt32
-            let value: String
+        public struct Domain: Encodable {
+            public let lengthBytes: UInt32
+            public let value: String
         }
         
-        let name = "ton_proof"
-        let proof: Proof
+        public let name = "ton_proof"
+        public let proof: Proof
     }
     
     public struct TonProofItemReplyError: Encodable {

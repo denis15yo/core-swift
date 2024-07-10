@@ -68,7 +68,7 @@ public extension TonConnect.TonAddressItemReply {
     }
 }
 
-extension TonConnect.TonProofItemReplySuccess.Signature {
+public extension TonConnect.TonProofItemReplySuccess.Signature {
     func data() -> Data {
         let string = "ton-proof-item-v2/".data(using: .utf8)!
         let addressWorkchain = UInt32(bigEndian: UInt32(address.workchain))
@@ -90,7 +90,7 @@ extension TonConnect.TonProofItemReplySuccess.Signature {
     }
 }
 
-extension TonConnect.TonProofItemReplySuccess.Proof {
+public extension TonConnect.TonProofItemReplySuccess.Proof {
     enum CodingKeys: String, CodingKey {
         case timestamp
         case domain
