@@ -133,6 +133,11 @@ public actor TonConnectController {
         }
         try appsVault.saveValue(apps.addApp(tonConnectApp), for: wallet)
         notifyObservers()
+        
+        TonConnectRetProcessor().process(
+            ret: parameters.ret,
+            manifest: manifest
+        )
     }
     
     public func rejectConnection() async throws {
@@ -149,6 +154,11 @@ public actor TonConnectController {
                 ttl: 300
             ),
             body: .plainText(.init(stringLiteral: body))
+        )
+        
+        TonConnectRetProcessor().process(
+            ret: parameters.ret,
+            manifest: manifest
         )
     }
     

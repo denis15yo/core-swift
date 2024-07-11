@@ -56,16 +56,25 @@ public final class TonConnectConfirmationController {
         await state.setValue(.confirmation(appRequest, app: app))
     }
 
-    public func didFinish() async throws {
-        guard case .confirmation = await state.property else {
+    public func didFinish(
+        ret: TonConnectRet?
+    ) async throws {
+        guard case .confirmation(_, let app) = await state.property else {
             await state.setValue(.idle)
             return
         }
         try await cancelAppRequest()
         await state.setValue(.idle)
+        
+        TonConnectRetProcessor().process(
+            ret: ret,
+            manifest: app.manifest
+        )
     }
     
-    public func confirmTransaction() async throws {
+    public func confirmTransaction(
+        ret: TonConnectRet?
+    ) async throws {
         guard case .confirmation(let message, let app) = await state.property else { return }
         guard let params = message.params.first else { return }
         
@@ -94,6 +103,11 @@ public final class TonConnectConfirmationController {
                          to: app.clientId,
                          ttl: 300),
             body: .plainText(.init(stringLiteral: body))
+        )
+        
+        TonConnectRetProcessor().process(
+            ret: ret,
+            manifest: app.manifest
         )
     }
 }
