@@ -7,22 +7,26 @@
 
 import Foundation
 import TonSwift
+import WalletCoreCore
 
 public extension TonConnect {
     struct AppRequest: Decodable {
         public enum Method: String, Decodable {
+            case disconnect
             case sendTransaction
         }
         
         public struct Param: Decodable {
             public let messages: [Message]
-            public let validUntil: TimeInterval
+            public var validUntil: TimeInterval
             public let from: Address?
+            public let network: Network?
             
             enum CodingKeys: String, CodingKey {
                 case messages
                 case validUntil = "valid_until"
                 case from
+                case network
             }
             
             public init(from decoder: Decoder) throws {
@@ -30,6 +34,7 @@ public extension TonConnect {
                 messages = try container.decode([Message].self, forKey: .messages)
                 validUntil = try container.decode(TimeInterval.self, forKey: .validUntil)
                 from = try Address.parse(try container.decode(String.self, forKey: .from))
+                network = try container.decodeIfPresent(Network.self, forKey: .network)
             }
         }
         
@@ -56,8 +61,14 @@ public extension TonConnect {
         }
         
         public let method: Method
-        public let params: [Param]
-        public let id: String
+        public var params: [Param]
+        public var id: String
+        
+        public init(method: Method, params: [Param], id: String) {
+            self.method = method
+            self.params = params
+            self.id = id
+        }
         
         enum CodingKeys: String, CodingKey {
             case method
@@ -71,9 +82,9 @@ public extension TonConnect {
             id = try container.decode(String.self, forKey: .id)
             let paramsArray = try container.decode([String].self, forKey: .params)
             let jsonDecoder = JSONDecoder()
-            params = paramsArray.compactMap {
+            params = try paramsArray.compactMap {
                 guard let data = $0.data(using: .utf8) else { return nil }
-                return try? jsonDecoder.decode(Param.self, from: data)
+                return try jsonDecoder.decode(Param.self, from: data)
             }
         }
     }

@@ -174,13 +174,13 @@ extension TonConnect {
             self.id = id
         }
     }
-    struct SendTransactionResponseError: Encodable {
+    public struct SendTransactionResponseError: Encodable {
         struct Error: Encodable {
             let code: ErrorCode
             let message: String
         }
         
-        enum ErrorCode: Int, Encodable {
+        public enum ErrorCode: Int, Encodable {
             case unknownError = 0
             case badRequest = 1
             case unknownApp = 10

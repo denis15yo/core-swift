@@ -56,15 +56,29 @@ public final class TonConnectConfirmationController {
         await state.setValue(.confirmation(appRequest, app: app))
     }
 
-    public func didFinish(
+    public func finishAppRequest(
+        errorCode: TonConnect.SendTransactionResponseError.ErrorCode,
         ret: TonConnectRet?
     ) async throws {
-        guard case .confirmation(_, let app) = await state.property else {
+        guard case .confirmation(let appRequest, let app) = await state.property else {
             await state.setValue(.idle)
             return
         }
-        try await cancelAppRequest()
+        
         await state.setValue(.idle)
+        let sessionCrypto = try TonConnectSessionCrypto(privateKey: app.keyPair.privateKey)
+        let body = try TonConnectResponseBuilder.buildSendTransactionResponseError(
+            sessionCrypto: sessionCrypto,
+            errorCode: errorCode,
+            id: appRequest.id,
+            clientId: app.clientId)
+        
+        _ = try await apiClient.message(
+            query: .init(client_id: sessionCrypto.sessionId,
+                         to: app.clientId,
+                         ttl: 300),
+            body: .plainText(.init(stringLiteral: body))
+        )
         
         TonConnectRetProcessor().process(
             ret: ret,
@@ -140,20 +154,9 @@ private extension TonConnectConfirmationController {
     }
     
     func cancelAppRequest() async throws {
-        guard case .confirmation(let appRequest, let app) = await state.property else { return }
-        await state.setValue(.idle)
-        let sessionCrypto = try TonConnectSessionCrypto(privateKey: app.keyPair.privateKey)
-        let body = try TonConnectResponseBuilder.buildSendTransactionResponseError(
-            sessionCrypto: sessionCrypto,
+        try await finishAppRequest(
             errorCode: .userDeclinedTransaction,
-            id: appRequest.id,
-            clientId: app.clientId)
-        
-        _ = try await apiClient.message(
-            query: .init(client_id: sessionCrypto.sessionId,
-                         to: app.clientId,
-                         ttl: 300),
-            body: .plainText(.init(stringLiteral: body))
+            ret: nil
         )
     }
     

@@ -122,7 +122,8 @@ public actor TonConnectController {
         let tonConnectApp = TonConnectApp(
             clientId: parameters.clientId,
             manifest: manifest,
-            keyPair: sessionCrypto.keyPair
+            keyPair: sessionCrypto.keyPair,
+            walletAddress: try wallet.address
         )
         
         let apps: TonConnectApps

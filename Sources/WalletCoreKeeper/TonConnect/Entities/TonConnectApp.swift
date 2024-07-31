@@ -22,4 +22,5 @@ public struct TonConnectApp: Codable {
     public let clientId: String
     public let manifest: TonConnectManifest
     public let keyPair: TonSwift.KeyPair
+    public let walletAddress: Address?
 }

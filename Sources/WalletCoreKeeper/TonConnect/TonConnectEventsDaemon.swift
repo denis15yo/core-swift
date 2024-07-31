@@ -12,9 +12,17 @@ import TonSwift
 import WalletCoreCore
 
 public protocol TonConnectEventsDaemonObserver: AnyObject {
-    func tonConnectEventsDaemonDidReceiveRequest(_ daemon: TonConnectEventsDaemon,
-                                                 appRequest: TonConnect.AppRequest,
-                                                 app: TonConnectApp)
+    func tonConnectEventsDaemonDidReceiveRequest(
+        _ daemon: TonConnectEventsDaemon,
+        appRequest: TonConnect.AppRequest,
+        app: TonConnectApp
+    )
+    func tonConnectEventsDaemonDidReceiveInvalidRequest(
+        _ daemon: TonConnectEventsDaemon,
+        appRequest: TonConnect.AppRequest,
+        app: TonConnectApp,
+        error: Error
+    )
 }
 
 public final class TonConnectEventsDaemon {
@@ -113,26 +121,82 @@ private extension TonConnectEventsDaemon {
             item: .init(walletId: walletIdentity,
                         lastEventId: event.id)
         )
-        try? handleEvent(tcEvent, apps: apps)
+        handleEvent(tcEvent, apps: apps)
     }
     
     func handleEvent(_ event: TonConnectEvent,
-                     apps: TonConnectApps) throws {
+                     apps: TonConnectApps) {
         guard let eventApp = apps.apps.first(where: { $0.clientId == event.from }) else { return }
-        let sessionCrypto = try TonConnectSessionCrypto(privateKey: eventApp.keyPair.privateKey)
-        guard let senderPublicKey = Data(hex: eventApp.clientId),
-              let message = Data(base64Encoded: event.message) else { return }
-        let decryptedMessage = try sessionCrypto
-            .decrypt(
-                message: message,
-                senderPublicKey: senderPublicKey
-            )
-        notifyObservers(
-            appRequest: try JSONDecoder()
-                .decode(TonConnect.AppRequest.self,
-                        from: decryptedMessage),
-            app: eventApp
+        
+        var appRequest = TonConnect.AppRequest(
+            method: .sendTransaction,
+            params: [],
+            id: ""
         )
+        
+        do {
+            let sessionCrypto = try TonConnectSessionCrypto(privateKey: eventApp.keyPair.privateKey)
+            guard let senderPublicKey = Data(hex: eventApp.clientId),
+                  let message = Data(base64Encoded: event.message) else { return }
+            let decryptedMessage = try sessionCrypto
+                .decrypt(
+                    message: message,
+                    senderPublicKey: senderPublicKey
+                )
+            
+            appRequest.id = (try? JSONDecoder().decode(
+                AppRequestIdDecoder.self,
+                from: decryptedMessage
+            ).id) ?? ""
+            
+            appRequest = try JSONDecoder().decode(
+                TonConnect.AppRequest.self,
+                from: decryptedMessage
+            )
+            appRequest = try validate(
+                appRequest: appRequest,
+                app: eventApp
+            )
+            
+            notifyObservers(
+                appRequest: appRequest,
+                app: eventApp
+            )
+        } catch {
+            notifyObserversAboutInvalidRequest(
+                appRequest: appRequest,
+                app: eventApp,
+                error: error
+            )
+        }
+    }
+    
+    func validate(
+        appRequest: TonConnect.AppRequest,
+        app: TonConnectApp
+    ) throws -> TonConnect.AppRequest {
+        var result = appRequest
+        result.params = try result.params.map { param in
+            var param = param
+            
+            // Validate validUntil
+            let currentTs = Date().timeIntervalSince1970
+            if param.validUntil < currentTs {
+                throw TonError.custom("Transaction is outdated")
+            }
+            param.validUntil = min(param.validUntil, currentTs + 5 * 60)
+            
+            // Validate from
+            if let from = param.from,
+               let appWalletAddress = app.walletAddress,
+               from != appWalletAddress {
+                throw TonError.custom("\"from\" address \(from.toString()) is not allowed")
+            }
+            
+            return param
+        }
+        
+        return result
     }
     
     func notifyObservers(appRequest: TonConnect.AppRequest,
@@ -145,5 +209,26 @@ private extension TonConnectEventsDaemon {
                     app: app
                 ) }
     }
+    
+    func notifyObserversAboutInvalidRequest(
+        appRequest: TonConnect.AppRequest,
+        app: TonConnectApp,
+        error: Error
+    ) {
+        observers = observers.filter { $0.observer != nil }
+        observers.forEach {
+            $0.observer?.tonConnectEventsDaemonDidReceiveInvalidRequest(
+                self,
+                appRequest: appRequest,
+                app: app,
+                error: error
+            )
+        }
+    }
 }
 
+//  MARK: - Helpers
+
+private struct AppRequestIdDecoder: Decodable {
+    let id: String
+}
