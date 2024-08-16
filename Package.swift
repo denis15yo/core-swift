@@ -14,7 +14,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/denis15yo/ton-swift.git", branch: "main"),
-        .package(url: "https://github.com/tonkeeper/ton-api-swift", from: "0.1.1"),
+        .package(url: "https://github.com/tonkeeper/ton-api-swift", exact: "0.1.7"),
         .package(url: "https://github.com/apple/swift-openapi-runtime", .upToNextMinor(from: "0.3.0"))
     ],
     targets: [
