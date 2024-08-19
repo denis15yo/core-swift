@@ -162,6 +162,7 @@ public struct ExternalMessageTransferBuilder {
                                                sender: Address,
                                                sendMode: SendMode = .walletDefault(),
                                                seqno: UInt64,
+                                               messageType: MessageType = .ext,
                                                internalMessages: (_ sender: Address) throws -> [MessageRelaxed],
                                                signClosure: (WalletTransfer) async throws -> Cell) async throws -> String {
         let internalMessages = try internalMessages(sender)
@@ -171,7 +172,10 @@ public struct ExternalMessageTransferBuilder {
             sendMode: sendMode,
             timeout: nil)
         let contract = try wallet.contract
-        let transfer = try contract.createTransfer(args: transferData)
+        let transfer = try contract.createTransfer(
+            args: transferData,
+            messageType: messageType
+        )
         let transferCell = try await signClosure(transfer)
         let externalMessage = Message.external(to: sender,
                                                stateInit: contract.stateInit,
