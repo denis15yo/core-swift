@@ -89,6 +89,13 @@ extension Wallet {
         get throws {
             let publicKey = try publicKey
             switch contractVersion {
+            case .v5R1:
+                return try WalletV5R1(
+                    publicKey: publicKey.data,
+                    walletId: WalletId(
+                        networkGlobalId: Int32(identity.network.rawValue)
+                    )
+                )
             case .v4R2:
                 return WalletV4R2(publicKey: publicKey.data)
             case .v4R1:

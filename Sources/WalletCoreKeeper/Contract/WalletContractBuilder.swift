@@ -16,6 +16,13 @@ struct WalletContractBuilder {
     func walletContract(with publicKey: TonSwift.PublicKey,
                         contractVersion: WalletContractVersion) throws -> WalletContract {
         switch contractVersion {
+        case .v5R1:
+            return WalletV5R1(
+                publicKey: publicKey.data,
+                walletId: WalletId(
+                    networkGlobalId: Int32(Network.mainnet.rawValue)
+                )
+            )
         case .v4R2:
             return WalletV4R2(publicKey: publicKey.data)
         case .v4R1:

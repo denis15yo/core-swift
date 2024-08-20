@@ -145,6 +145,8 @@ private extension WalletBalanceServiceImplementation {
 private extension WalletContractVersion {
     var previousContractVersions: [WalletContractVersion] {
         switch self {
+        case .v5R1:
+            return [.v4R2, .v4R1, .v3R2, .v3R1]
         case .v4R2:
             return [.v4R1, .v3R2, .v3R1]
         case .v4R1:
