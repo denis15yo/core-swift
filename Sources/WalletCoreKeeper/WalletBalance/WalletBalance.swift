@@ -56,14 +56,22 @@ public struct TokenInfo: Codable, Equatable {
     public var symbol: String?
     public var description: String?
     public var imageURL: URL?
+    public let verification: VerificationType
     
-    public init(address: Address, fractionDigits: Int, name: String, symbol: String? = nil, description: String? = nil, imageURL: URL? = nil) {
+    public enum VerificationType: String, Codable {
+        case whitelist
+        case blacklist
+        case none
+    }
+    
+    public init(address: Address, fractionDigits: Int, name: String, symbol: String? = nil, description: String? = nil, imageURL: URL? = nil, verification: VerificationType = .none) {
         self.address = address
         self.fractionDigits = fractionDigits
         self.name = name
         self.symbol = symbol
         self.description = description
         self.imageURL = imageURL
+        self.verification = verification
     }
     
     public static func == (lhs: Self, rhs: Self) -> Bool {
@@ -102,51 +110,51 @@ enum AppTokenAmount {
 }
 
 public struct Collectible: Codable {
-    let address: Address
-    let owner: WalletAccount?
-    let name: String?
-    let imageURL: URL?
-    let preview: Preview
-    let description: String?
-    let attributes: [Attribute]
-    let collection: Collection?
-    let dns: String?
-    let sale: Sale?
-    let isHidden: Bool
+    public let address: Address
+    public let owner: WalletAccount?
+    public let name: String?
+    public let imageURL: URL?
+    public let preview: Preview
+    public let description: String?
+    public let attributes: [Attribute]
+    public let collection: Collection?
+    public let dns: String?
+    public let sale: Sale?
+    public let isHidden: Bool
 
-    struct Marketplace {
+    public struct Marketplace {
         let name: String
         let url: URL?
     }
     
-    struct Attribute: Codable {
-        let key: String
-        let value: String
+    public struct Attribute: Codable {
+        public let key: String
+        public let value: String
     }
     
-    enum Trust {
-        struct Approval {
+    public enum Trust {
+        public struct Approval {
             let name: String
         }
         case approvedBy([Approval])
     }
     
-    struct Preview: Codable {
-        let size5: URL?
-        let size100: URL?
-        let size500: URL?
-        let size1500: URL?
+    public struct Preview: Codable {
+        public let size5: URL?
+        public let size100: URL?
+        public let size500: URL?
+        public let size1500: URL?
     }
     
-    struct Sale: Codable {
-        let address: Address
-        let market: WalletAccount
-        let owner: WalletAccount?
+    public struct Sale: Codable {
+        public let address: Address
+        public let market: WalletAccount
+        public let owner: WalletAccount?
     }
 }
 
-struct Collection: Codable {
-    let address: Address
-    let name: String?
-    let description: String?
+public struct Collection: Codable {
+    public let address: Address
+    public let name: String?
+    public let description: String?
 }

@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum Status: Codable {
+public enum Status: Codable {
     case ok
     case failed
     case unknown(String)

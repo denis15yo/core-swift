@@ -11,20 +11,20 @@ import BigInt
 import TonAPI
 
 public struct Action: Codable {
-    let type: ActionType
-    let status: Status
-    let preview: SimplePreview
+    public let type: ActionType
+    public let status: Status
+    public let preview: SimplePreview
     
-    struct SimplePreview: Codable {
-        let name: String
-        let description: String
-        let image: URL?
-        let value: String?
-        let valueImage: URL?
-        let accounts: [WalletAccount]
+    public struct SimplePreview: Codable {
+        public let name: String
+        public let description: String
+        public let image: URL?
+        public let value: String?
+        public let valueImage: URL?
+        public let accounts: [WalletAccount]
     }
     
-    enum ActionType: Codable {
+    public enum ActionType: Codable {
         case tonTransfer(TonTransfer)
         case contractDeploy(ContractDeploy)
         case jettonTransfer(JettonTransfer)
@@ -44,131 +44,131 @@ public struct Action: Codable {
         case unknown
     }
     
-    struct TonTransfer: Codable {
-        let sender: WalletAccount
-        let recipient: WalletAccount
-        let amount: Int64
-        let comment: String?
+    public struct TonTransfer: Codable {
+        public let sender: WalletAccount
+        public let recipient: WalletAccount
+        public let amount: Int64
+        public let comment: String?
     }
 
-    struct ContractDeploy: Codable {
-        let address: Address
+    public struct ContractDeploy: Codable {
+        public let address: Address
     }
 
-    struct JettonTransfer: Codable {
-        let sender: WalletAccount?
-        let recipient: WalletAccount?
-        let senderAddress: Address
-        let recipientAddress: Address
-        let amount: BigInt
-        let tokenInfo: TokenInfo
-        let comment: String?
+    public struct JettonTransfer: Codable {
+        public let sender: WalletAccount?
+        public let recipient: WalletAccount?
+        public let senderAddress: Address
+        public let recipientAddress: Address
+        public let amount: BigInt
+        public let tokenInfo: TokenInfo
+        public let comment: String?
     }
 
-    struct NFTItemTransfer: Codable {
-        let sender: WalletAccount?
-        let recipient: WalletAccount?
-        let nftAddress: Address
-        let comment: String?
-        let payload: String?
+    public struct NFTItemTransfer: Codable {
+        public let sender: WalletAccount?
+        public let recipient: WalletAccount?
+        public let nftAddress: Address
+        public let comment: String?
+        public let payload: String?
     }
 
-    struct Subscription: Codable {
-        let subscriber: WalletAccount
-        let subscriptionAddress: Address
-        let beneficiary: WalletAccount
-        let amount: Int64
-        let isInitial: Bool
+    public struct Subscription: Codable {
+        public let subscriber: WalletAccount
+        public let subscriptionAddress: Address
+        public let beneficiary: WalletAccount
+        public let amount: Int64
+        public let isInitial: Bool
     }
 
-    struct Unsubscription: Codable {
-        let subscriber: WalletAccount
-        let subscriptionAddress: Address
-        let beneficiary: WalletAccount
+    public struct Unsubscription: Codable {
+        public let subscriber: WalletAccount
+        public let subscriptionAddress: Address
+        public let beneficiary: WalletAccount
     }
 
-    struct AuctionBid: Codable {
-        let auctionType: String
-        let price: Price
-        let collectible: Collectible?
-        let bidder: WalletAccount
-        let auction: WalletAccount
+    public struct AuctionBid: Codable {
+        public let auctionType: String
+        public let price: Price
+        public let collectible: Collectible?
+        public let bidder: WalletAccount
+        public let auction: WalletAccount
     }
 
-    struct NFTPurchase: Codable {
-        let auctionType: String
-        let collectible: Collectible
-        let seller: WalletAccount
-        let buyer: WalletAccount
-        let price: BigInt
+    public struct NFTPurchase: Codable {
+        public let auctionType: String
+        public let collectible: Collectible
+        public let seller: WalletAccount
+        public let buyer: WalletAccount
+        public let price: BigInt
     }
 
-    struct DepositStake: Codable {
-        let amount: Int64
-        let staker: WalletAccount
-        let pool: WalletAccount
+    public struct DepositStake: Codable {
+        public let amount: Int64
+        public let staker: WalletAccount
+        public let pool: WalletAccount
     }
     
-    struct WithdrawStake: Codable {
-        let amount: Int64
-        let staker: WalletAccount
-        let pool: WalletAccount
+    public struct WithdrawStake: Codable {
+        public let amount: Int64
+        public let staker: WalletAccount
+        public let pool: WalletAccount
     }
 
-    struct WithdrawStakeRequest: Codable {
-        let amount: Int64?
-        let staker: WalletAccount
-        let pool: WalletAccount
+    public struct WithdrawStakeRequest: Codable {
+        public let amount: Int64?
+        public let staker: WalletAccount
+        public let pool: WalletAccount
     }
 
-    struct RecoverStake: Codable {
-        let amount: Int64
-        let staker: WalletAccount
+    public struct RecoverStake: Codable {
+        public let amount: Int64
+        public let staker: WalletAccount
     }
 
-    struct JettonSwap: Codable {
-        let dex: String
-        let amountIn: BigInt
-        let amountOut: BigInt
-        let tonIn: Int64?
-        let tonOut: Int64?
-        let user: WalletAccount
-        let router: WalletAccount
-        let tokenInfoIn: TokenInfo?
-        let tokenInfoOut: TokenInfo?
+    public struct JettonSwap: Codable {
+        public let dex: String
+        public let amountIn: BigInt
+        public let amountOut: BigInt
+        public let tonIn: Int64?
+        public let tonOut: Int64?
+        public let user: WalletAccount
+        public let router: WalletAccount
+        public let tokenInfoIn: TokenInfo?
+        public let tokenInfoOut: TokenInfo?
     }
     
-    struct JettonMint: Codable {
-        let recipient: WalletAccount
-        let recipientsWallet: Address
-        let amount: BigInt
-        let tokenInfo: TokenInfo
+    public struct JettonMint: Codable {
+        public let recipient: WalletAccount
+        public let recipientsWallet: Address
+        public let amount: BigInt
+        public let tokenInfo: TokenInfo
     }
     
-    struct JettonBurn: Codable {
-        let sender: WalletAccount
-        let senderWallet: Address
-        let amount: BigInt
-        let tokenInfo: TokenInfo
+    public struct JettonBurn: Codable {
+        public let sender: WalletAccount
+        public let senderWallet: Address
+        public let amount: BigInt
+        public let tokenInfo: TokenInfo
     }
 
-    struct SmartContractExec: Codable {
-        let executor: WalletAccount
-        let contract: WalletAccount
-        let tonAttached: Int64
-        let operation: String
-        let payload: String?
+    public struct SmartContractExec: Codable {
+        public let executor: WalletAccount
+        public let contract: WalletAccount
+        public let tonAttached: Int64
+        public let operation: String
+        public let payload: String?
     }
     
-    struct DomainRenew: Codable {
-        let domain: String
-        let contractAddress: String
-        let renewer: WalletAccount
+    public struct DomainRenew: Codable {
+        public let domain: String
+        public let contractAddress: String
+        public let renewer: WalletAccount
     }
     
-    struct Price: Codable {
-        let amount: BigInt
-        let tokenName: String
+    public struct Price: Codable {
+        public let amount: BigInt
+        public let tokenName: String
     }
 }
 

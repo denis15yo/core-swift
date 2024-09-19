@@ -10,17 +10,17 @@ import TonAPI
 import TonSwift
 import BigInt
 
-struct AccountEvent: Codable {
-    let eventId: String
-    let timestamp: TimeInterval
-    let account: WalletAccount
-    let isScam: Bool
-    let isInProgress: Bool
-    let fee: Int64
-    let actions: [Action]
+public struct AccountEvent: Codable {
+    public let eventId: String
+    public let timestamp: TimeInterval
+    public let account: WalletAccount
+    public let isScam: Bool
+    public let isInProgress: Bool
+    public let fee: Int64
+    public let actions: [Action]
 }
 
-extension AccountEvent {
+public extension AccountEvent {
     init(accountEvent: Components.Schemas.AccountEvent) throws {
         self.eventId = accountEvent.event_id
         self.timestamp = TimeInterval(accountEvent.timestamp)

@@ -17,5 +17,16 @@ extension TokenInfo {
         name = jettonPreview.name
         symbol = jettonPreview.symbol
         imageURL = URL(string: jettonPreview.image)
+        verification = TokenInfo.VerificationType(jettonVerificationType: jettonPreview.verification)
+    }
+}
+
+extension TokenInfo.VerificationType {
+    init(jettonVerificationType: Components.Schemas.JettonVerificationType) {
+        self = switch jettonVerificationType {
+        case .whitelist: .whitelist
+        case .blacklist: .blacklist
+        case .none: .none
+        }
     }
 }
