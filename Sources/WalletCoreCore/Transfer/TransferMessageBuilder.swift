@@ -48,14 +48,17 @@ public struct TonConnectTransferMessageBuilder {
     public struct Payload {
         let value: BigInt
         let recipientAddress: Address
+        let bounceable: Bool
         let stateInit: String?
         let payload: String?
         
         public init(value: BigInt, 
                     recipientAddress: Address,
+                    bounceable: Bool = false,
                     stateInit: String?,
                     payload: String?) {
             self.value = value
+            self.bounceable = bounceable
             self.recipientAddress = recipientAddress
             self.stateInit = stateInit
             self.payload = payload
@@ -83,7 +86,7 @@ public struct TonConnectTransferMessageBuilder {
             return MessageRelaxed.internal(
                 to: payload.recipientAddress,
                 value: payload.value.magnitude,
-                bounce: false,
+                bounce: payload.bounceable,
                 stateInit: stateInit,
                 body: body)
         }
