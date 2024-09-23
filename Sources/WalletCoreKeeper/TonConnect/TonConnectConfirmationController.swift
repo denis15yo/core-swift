@@ -222,6 +222,7 @@ private extension TonConnectConfirmationController {
             TonConnectTransferMessageBuilder.Payload(
                 value: BigInt(integerLiteral: message.amount),
                 recipientAddress: message.address,
+                bounceable: message.bounceable,
                 stateInit: message.stateInit,
                 payload: message.payload)
         }

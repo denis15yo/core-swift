@@ -41,6 +41,7 @@ public extension TonConnect {
         public struct Message: Decodable {
             public let address: Address
             public let amount: Int64
+            public let bounceable: Bool
             public let stateInit: String?
             public let payload: String?
             
@@ -53,8 +54,10 @@ public extension TonConnect {
             
             public init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
-                address = try Address.parse(try container.decode(String.self, forKey: .address))
+                let addressString = try container.decode(String.self, forKey: .address)
+                address = try Address.parse(addressString)
                 amount = Int64(try container.decode(String.self, forKey: .amount)) ?? 0
+                bounceable = addressString.isTonAddressBounceable()
                 stateInit = try container.decodeIfPresent(String.self, forKey: .stateInit)
                 payload = try container.decodeIfPresent(String.self, forKey: .payload)
             }
@@ -87,5 +90,11 @@ public extension TonConnect {
                 return try jsonDecoder.decode(Param.self, from: data)
             }
         }
+    }
+}
+
+private extension String {
+    func isTonAddressBounceable() -> Bool {
+        starts(with: "EQ")
     }
 }
