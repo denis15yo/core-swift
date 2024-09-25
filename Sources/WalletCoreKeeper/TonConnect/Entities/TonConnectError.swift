@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct TonConnectError: Swift.Error, Decodable {
+public struct TonConnectError: Swift.Error, Decodable {
     let statusCode: Int
     let message: String
 }

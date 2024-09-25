@@ -39,7 +39,9 @@ public final class Assembly {
         walletMnemonicRepository: walletMnemonicRepository
     )
     
-    public lazy var walletProvider: WalletProvider = walletsController
+    public var walletProvider: WalletProvider {
+        walletsController
+    }
     
     public var passcodeController: PasscodeController {
         PasscodeController(passcodeVault: passcodeVault)

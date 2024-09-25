@@ -14,6 +14,6 @@ public struct TonConnectParameters {
     
     let version: Version
     public let clientId: String
-    let requestPayload: TonConnectRequestPayload
+    public let requestPayload: TonConnectRequestPayload
     let ret: TonConnectRet?
 }

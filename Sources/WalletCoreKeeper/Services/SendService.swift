@@ -9,7 +9,7 @@ import Foundation
 import TonAPI
 import TonSwift
 
-public protocol SendService {
+protocol SendService {
     func loadSeqno(address: Address) async throws -> UInt64
     func loadTransactionInfo(boc: String) async throws -> Components.Schemas.MessageConsequences
     func sendTransaction(boc: String) async throws

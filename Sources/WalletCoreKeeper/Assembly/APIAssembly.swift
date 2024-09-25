@@ -13,7 +13,7 @@ import StreamURLSessionTransport
 import EventSource
 import OpenAPIRuntime
 
-public final class APIAssembly {
+final class APIAssembly {
     let configurationAssembly: ConfigurationAssembly
     
     // MARK: - Private properties
@@ -30,7 +30,7 @@ public final class APIAssembly {
         API(tonAPIClient: tonAPIClient())
     }
     
-    public var _tonAPIClient: TonAPI.Client?
+    private var _tonAPIClient: TonAPI.Client?
     func tonAPIClient() -> TonAPI.Client {
         if let tonAPIClient = _tonAPIClient {
             return tonAPIClient

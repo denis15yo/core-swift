@@ -122,8 +122,7 @@ public actor TonConnectController {
         let tonConnectApp = TonConnectApp(
             clientId: parameters.clientId,
             manifest: manifest,
-            keyPair: sessionCrypto.keyPair,
-            walletAddress: try wallet.address
+            keyPair: sessionCrypto.keyPair
         )
         
         let apps: TonConnectApps
@@ -134,33 +133,6 @@ public actor TonConnectController {
         }
         try appsVault.saveValue(apps.addApp(tonConnectApp), for: wallet)
         notifyObservers()
-        
-        TonConnectRetProcessor().process(
-            ret: parameters.ret,
-            manifest: manifest
-        )
-    }
-    
-    public func rejectConnection() async throws {
-        let sessionCrypto = try TonConnectSessionCrypto()
-        let body = try TonConnectResponseBuilder.buildConnectEventErrorResponse(
-            sessionCrypto: sessionCrypto,
-            errorCode: .userDeclinedTheConnection,
-            clientId: parameters.clientId
-        )
-        _ = try await apiClient.message(
-            query: .init(
-                client_id: sessionCrypto.sessionId,
-                to: parameters.clientId,
-                ttl: 300
-            ),
-            body: .plainText(.init(stringLiteral: body))
-        )
-        
-        TonConnectRetProcessor().process(
-            ret: parameters.ret,
-            manifest: manifest
-        )
     }
     
     func addObserver(_ observer: TonConnectControllerObserver) {

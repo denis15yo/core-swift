@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct TonConnectEvent: Decodable {
-    let from: String
-    let message: String
+public struct TonConnectEvent: Decodable {
+    public let from: String
+    public let message: String
 }

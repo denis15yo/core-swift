@@ -9,25 +9,25 @@ import Foundation
 import TweetNacl
 import TonSwift
 
-struct TonConnectSessionCrypto {
+public struct TonConnectSessionCrypto {
     public let sessionId: String
     public let keyPair: KeyPair
     
-    init() throws {
+    public init() throws {
         let keyPair = try TweetNacl.NaclBox.keyPair()
         self.keyPair = KeyPair(publicKey: .init(data: keyPair.publicKey),
                                privateKey: .init(data: keyPair.secretKey))
         self.sessionId = keyPair.publicKey.hexString()
     }
     
-    init(privateKey: PrivateKey) throws {
+    public init(privateKey: PrivateKey) throws {
         let keyPair = try TweetNacl.NaclBox.keyPair(fromSecretKey: privateKey.data)
         self.keyPair = KeyPair(publicKey: .init(data: keyPair.publicKey),
                                privateKey: .init(data: keyPair.secretKey))
         self.sessionId = keyPair.publicKey.hexString()
     }
     
-    func encrypt(message: Data, receiverPublicKey: Data) throws -> Data {
+    public func encrypt(message: Data, receiverPublicKey: Data) throws -> Data {
         let nonce = try createNonce()
         let encrypted = try TweetNacl.NaclBox.box(
             message: message,
@@ -37,7 +37,7 @@ struct TonConnectSessionCrypto {
         return nonce + encrypted
     }
     
-    func decrypt(message: Data, senderPublicKey: Data) throws -> Data {
+    public func decrypt(message: Data, senderPublicKey: Data) throws -> Data {
         guard message.count >= .nonceLength else {
             return Data()
         }

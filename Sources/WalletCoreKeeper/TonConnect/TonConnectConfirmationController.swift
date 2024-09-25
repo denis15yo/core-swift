@@ -51,44 +51,26 @@ public final class TonConnectConfirmationController {
     }
     
     public func handleAppRequest(_ appRequest: TonConnect.AppRequest,
-                                 app: TonConnectApp) async {
-        guard case .idle = await state.property else { return }
-        await state.setValue(.confirmation(appRequest, app: app))
+                                 app: TonConnectApp) {
+        Task {
+            guard case .idle = await state.property else { return }
+            await state.setValue(.confirmation(appRequest, app: app))
+            emulateAppRequest(appRequest)
+        }
     }
 
-    public func finishAppRequest(
-        errorCode: TonConnect.SendTransactionResponseError.ErrorCode,
-        ret: TonConnectRet?
-    ) async throws {
-        guard case .confirmation(let appRequest, let app) = await state.property else {
+    public func didFinish() {
+        Task {
+            guard case .confirmation = await state.property else {
+                await state.setValue(.idle)
+                return
+            }
+            await cancelAppRequest()
             await state.setValue(.idle)
-            return
         }
-        
-        await state.setValue(.idle)
-        let sessionCrypto = try TonConnectSessionCrypto(privateKey: app.keyPair.privateKey)
-        let body = try TonConnectResponseBuilder.buildSendTransactionResponseError(
-            sessionCrypto: sessionCrypto,
-            errorCode: errorCode,
-            id: appRequest.id,
-            clientId: app.clientId)
-        
-        _ = try await apiClient.message(
-            query: .init(client_id: sessionCrypto.sessionId,
-                         to: app.clientId,
-                         ttl: 300),
-            body: .plainText(.init(stringLiteral: body))
-        )
-        
-        TonConnectRetProcessor().process(
-            ret: ret,
-            manifest: app.manifest
-        )
     }
     
-    public func confirmTransaction(
-        ret: TonConnectRet?
-    ) async throws {
+    public func confirmTransaction() async throws {
         guard case .confirmation(let message, let app) = await state.property else { return }
         guard let params = message.params.first else { return }
         
@@ -118,11 +100,6 @@ public final class TonConnectConfirmationController {
                          ttl: 300),
             body: .plainText(.init(stringLiteral: body))
         )
-        
-        TonConnectRetProcessor().process(
-            ret: ret,
-            manifest: app.manifest
-        )
     }
 }
 
@@ -142,7 +119,7 @@ private extension TonConnectConfirmationController {
                     )
                 }
             } catch {
-                Task { try await cancelAppRequest() }
+                await cancelAppRequest()
                 await MainActor.run {
                     output?.tonConnectConfirmationControllerDidFinishEmulation(
                         self,
@@ -153,11 +130,24 @@ private extension TonConnectConfirmationController {
         }
     }
     
-    func cancelAppRequest() async throws {
-        try await finishAppRequest(
-            errorCode: .userDeclinedTransaction,
-            ret: nil
-        )
+    func cancelAppRequest() async {
+        guard case .confirmation(let appRequest, let app) = await state.property else { return }
+        await state.setValue(.idle)
+        Task {
+            let sessionCrypto = try TonConnectSessionCrypto(privateKey: app.keyPair.privateKey)
+            let body = try TonConnectResponseBuilder.buildSendTransactionResponseError(
+                sessionCrypto: sessionCrypto,
+                errorCode: .userDeclinedTransaction,
+                id: appRequest.id,
+                clientId: app.clientId)
+            
+            _ = try await apiClient.message(
+                query: .init(client_id: sessionCrypto.sessionId,
+                             to: app.clientId,
+                             ttl: 300),
+                body: .plainText(.init(stringLiteral: body))
+            )
+        }
     }
     
     func emulate(appRequestParam: TonConnect.AppRequest.Param) async throws -> TonConnectConfirmationModel {
@@ -222,7 +212,6 @@ private extension TonConnectConfirmationController {
             TonConnectTransferMessageBuilder.Payload(
                 value: BigInt(integerLiteral: message.amount),
                 recipientAddress: message.address,
-                bounceable: message.bounceable,
                 stateInit: message.stateInit,
                 payload: message.payload)
         }

@@ -29,20 +29,20 @@ public struct Dependencies {
     }
 }
 
-public typealias CoreAssembly = WalletCoreCore.Assembly
+typealias CoreAssembly = WalletCoreCore.Assembly
 
 public final class Assembly {
     private let dependencies: Dependencies
     
-    public let coreAssembly: CoreAssembly
+    private let coreAssembly: CoreAssembly
     private let formattersAssembly = FormattersAssembly()
     private let validatorsAssembly = ValidatorsAssembly()
     private let deeplinkAssembly = DeeplinkAssembly()
-    public lazy var apiAssembly = APIAssembly(
+    private lazy var apiAssembly = APIAssembly(
         configurationAssembly: self.configurationAssembly
     )
     private let legacyApiAssembly = LegacyAPIAssembly()
-    public lazy var servicesAssembly = ServicesAssembly(
+    private lazy var servicesAssembly = ServicesAssembly(
         coreAssembly: coreAssembly,
         apiAssembly: apiAssembly,
         legacyApiAssembly: legacyApiAssembly,

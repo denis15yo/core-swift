@@ -9,7 +9,9 @@ import Foundation
 import TonSwift
 import WalletCoreCore
 
-struct TonConnectResponseBuilder {
+public struct TonConnectResponseBuilder {}
+
+public extension TonConnectResponseBuilder {
     static func buildConnectEventSuccesResponse(requestPayloadItems: [TonConnectRequestPayload.Item],
                                                 wallet: Wallet,
                                                 sessionCrypto: TonConnectSessionCrypto,
