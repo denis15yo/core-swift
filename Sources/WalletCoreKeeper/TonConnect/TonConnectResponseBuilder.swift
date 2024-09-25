@@ -12,12 +12,15 @@ import WalletCoreCore
 public struct TonConnectResponseBuilder {}
 
 public extension TonConnectResponseBuilder {
-    static func buildConnectEventSuccesResponse(requestPayloadItems: [TonConnectRequestPayload.Item],
-                                                wallet: Wallet,
-                                                sessionCrypto: TonConnectSessionCrypto,
-                                                walletPrivateKey: TonSwift.PrivateKey,
-                                                manifest: TonConnectManifest,
-                                                clientId: String) throws -> String {
+    static func buildConnectEventSuccesResponse(
+        requestPayloadItems: [TonConnectRequestPayload.Item],
+        wallet: Wallet,
+        sessionCrypto: TonConnectSessionCrypto,
+        walletPrivateKey: TonSwift.PrivateKey,
+        manifest: TonConnectManifest,
+        clientId: String,
+        device: TonConnect.ConnectEventSuccess.DeviceInfo = .init()
+    ) throws -> String {
         let address = try wallet.address
         
         let replyItems = try requestPayloadItems.compactMap { item in
@@ -42,7 +45,7 @@ public extension TonConnectResponseBuilder {
         }
         let successEvent = TonConnect.ConnectEventSuccess(
             payload: .init(items: replyItems,
-                           device: .init())
+                           device: device)
         )
         let responseData = try JSONEncoder().encode(successEvent)
         guard let receiverPublicKey = Data(hex: clientId) else { return "" }

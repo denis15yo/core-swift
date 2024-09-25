@@ -35,17 +35,37 @@ extension TonConnect {
         }
         
         public struct DeviceInfo: Encodable {
-            let platform = "iphone"
-            let appName = "nicegramWallet"
-            let appVersion = "1.6.3"
-            let maxProtocolVersion = 2
-            let features = [Feature()]
+            let platform: String
+            let appName: String
+            let appVersion: String
+            let maxProtocolVersion: Int
+            let features: [Feature]
             
-            public init() {}
+            public init(
+                platform: String = "iphone",
+                appName: String = "Tonkeeper",
+                appVersion: String = "3.4.0",
+                maxProtocolVersion: Int = 2,
+                features: [Feature] = [Feature()]
+            ) {
+                self.platform = platform
+                self.appName = appName
+                self.appVersion = appVersion
+                self.maxProtocolVersion = maxProtocolVersion
+                self.features = features
+            }
             
-            struct Feature: Encodable {
-                let name = "SendTransaction"
-                let maxMessages = 4
+            public struct Feature: Encodable {
+                let name: String
+                let maxMessages: Int
+                
+                public init(
+                    name: String = "SendTransaction",
+                    maxMessages: Int = 4
+                ) {
+                    self.name = name
+                    self.maxMessages = maxMessages
+                }
             }
         }
     }
