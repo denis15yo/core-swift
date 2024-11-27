@@ -140,6 +140,7 @@ public struct NFTTransferMessageBuilder {
                                        recipientAddress: Address,
                                        isBounceable: Bool = true,
                                        transferAmount: BigUInt,
+                                       forwardPayload: Cell? = nil,
                                        signClosure: (WalletTransfer) async throws -> Cell) async throws -> String {
         return try await ExternalMessageTransferBuilder
             .externalMessageTransfer(
@@ -152,7 +153,7 @@ public struct NFTTransferMessageBuilder {
                         bounce: isBounceable,
                         to: recipientAddress,
                         from: sender,
-                        forwardPayload: nil)
+                        forwardPayload: forwardPayload)
                     return [internalMessage]
                 },
             signClosure: signClosure)
