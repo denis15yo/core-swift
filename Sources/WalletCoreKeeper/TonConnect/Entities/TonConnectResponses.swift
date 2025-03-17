@@ -27,10 +27,11 @@ extension TonConnect {
             }
         }
         let event = "connect"
-        let id = Int(Date().timeIntervalSince1970)
+        let id: Int
         let payload: Payload
         
-        public init(payload: Payload) {
+        public init(id: Int, payload: Payload) {
+            self.id = id
             self.payload = payload
         }
         
@@ -70,9 +71,14 @@ extension TonConnect {
         }
     }
     public struct ConnectEventError: Encodable {
-        struct Payload: Encodable {
+        public struct Payload: Encodable {
             let code: Error
             let message: String
+            
+            public init(code: Error, message: String) {
+                self.code = code
+                self.message = message
+            }
         }
         public enum Error: Int, Encodable {
             case unknownError = 0
@@ -83,8 +89,13 @@ extension TonConnect {
             case userDeclinedTheConnection = 300
         }
         let event = "connect_error"
-        let id = Int(Date().timeIntervalSince1970)
+        let id: Int
         let payload: Payload
+        
+        public init(id: Int, payload: Payload) {
+            self.id = id
+            self.payload = payload
+        }
     }
     
     public enum ConnectItemReply: Encodable {
@@ -181,7 +192,7 @@ extension TonConnect.TonProofItemReplySuccess.Domain {
 }
 
 extension TonConnect {
-    enum SendTransactionResponse {
+    public enum SendTransactionResponse {
         case success(SendTransactionResponseSuccess)
         case error(SendTransactionResponseError)
     }
@@ -195,9 +206,14 @@ extension TonConnect {
         }
     }
     public struct SendTransactionResponseError: Encodable {
-        struct Error: Encodable {
+        public struct Error: Encodable {
             let code: ErrorCode
             let message: String
+            
+            public init(code: ErrorCode, message: String) {
+                self.code = code
+                self.message = message
+            }
         }
         
         public enum ErrorCode: Int, Encodable {
@@ -210,5 +226,10 @@ extension TonConnect {
         
         let id: String
         let error: Error
+        
+        public init(id: String, error: Error) {
+            self.id = id
+            self.error = error
+        }
     }
 }

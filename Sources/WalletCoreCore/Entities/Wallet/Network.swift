@@ -17,12 +17,7 @@ extension Network: Decodable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         
-        var intValue = try? container.decode(Int16.self)
-        
-        if intValue == nil,
-           let stringValue = try? container.decode(String.self) {
-            intValue = Int16(stringValue)
-        }
+        let intValue = try? Int16(container.decode(String.self))
         
         if let intValue,
            let network = Network(rawValue: intValue) {

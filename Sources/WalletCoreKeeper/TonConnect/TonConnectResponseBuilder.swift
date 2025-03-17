@@ -13,6 +13,7 @@ public struct TonConnectResponseBuilder {}
 
 public extension TonConnectResponseBuilder {
     static func buildConnectEventSuccesResponse(
+        id: Int,
         requestPayloadItems: [TonConnectRequestPayload.Item],
         wallet: Wallet,
         sessionCrypto: TonConnectSessionCrypto,
@@ -44,6 +45,7 @@ public extension TonConnectResponseBuilder {
             }
         }
         let successEvent = TonConnect.ConnectEventSuccess(
+            id: id,
             payload: .init(items: replyItems,
                            device: device)
         )
@@ -57,14 +59,17 @@ public extension TonConnectResponseBuilder {
     }
     
     static func buildConnectEventErrorResponse(
+        id: Int,
         sessionCrypto: TonConnectSessionCrypto,
         errorCode: TonConnect.ConnectEventError.Error,
+        message: String = "",
         clientId: String
     ) throws -> String {
         let response = TonConnect.ConnectEventError(
+            id: id,
             payload: .init(
                 code: errorCode,
-                message: ""
+                message: message
             )
         )
         

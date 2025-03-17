@@ -120,7 +120,7 @@ public extension TonConnect.TonProofItemReplySuccess.Proof {
 }
 
 extension TonConnect.SendTransactionResponse: Encodable {
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()
         switch self {
         case .success(let success):

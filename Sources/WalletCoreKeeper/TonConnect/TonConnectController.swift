@@ -105,6 +105,7 @@ public actor TonConnectController {
         let sessionCrypto = try TonConnectSessionCrypto()
         let body = try TonConnectResponseBuilder
             .buildConnectEventSuccesResponse(
+                id: Int(Date().timeIntervalSince1970),
                 requestPayloadItems: parameters.requestPayload.items,
                 wallet: wallet,
                 sessionCrypto: sessionCrypto,

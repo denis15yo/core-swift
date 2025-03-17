@@ -18,7 +18,7 @@ public extension TonConnect {
         
         public struct Param: Decodable {
             public let messages: [Message]
-            public var validUntil: TimeInterval
+            public var validUntil: TimeInterval?
             public let from: Address?
             public let network: Network?
             
@@ -32,7 +32,7 @@ public extension TonConnect {
             public init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 messages = try container.decode([Message].self, forKey: .messages)
-                validUntil = try container.decode(TimeInterval.self, forKey: .validUntil)
+                validUntil = try container.decodeIfPresent(TimeInterval.self, forKey: .validUntil)
                 from = try Address.parse(try container.decode(String.self, forKey: .from))
                 network = try container.decodeIfPresent(Network.self, forKey: .network)
             }
@@ -56,7 +56,12 @@ public extension TonConnect {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 let addressString = try container.decode(String.self, forKey: .address)
                 address = try Address.parse(addressString)
-                amount = Int64(try container.decode(String.self, forKey: .amount)) ?? 0
+                let amountString = try container.decode(String.self, forKey: .amount)
+                if let amount = Int64(amountString) {
+                    self.amount = amount
+                } else {
+                    throw TonSwift.TonError.custom("Amount is invalid")
+                }
                 bounceable = addressString.isTonAddressBounceable()
                 stateInit = try container.decodeIfPresent(String.self, forKey: .stateInit)
                 payload = try container.decodeIfPresent(String.self, forKey: .payload)
