@@ -47,18 +47,15 @@ public struct TonConnectTransferMessageBuilder {
     
     public struct Payload {
         let value: BigInt
-        let recipientAddress: Address
-        let bounceable: Bool
+        let recipientAddress: String
         let stateInit: String?
         let payload: String?
         
         public init(value: BigInt, 
-                    recipientAddress: Address,
-                    bounceable: Bool = false,
+                    recipientAddress: String,
                     stateInit: String?,
                     payload: String?) {
             self.value = value
-            self.bounceable = bounceable
             self.recipientAddress = recipientAddress
             self.stateInit = stateInit
             self.payload = payload
@@ -69,6 +66,7 @@ public struct TonConnectTransferMessageBuilder {
                                               seqno: UInt64,
                                               payloads: [Payload],
                                               sender: Address? = nil,
+                                              validUntil: UInt64?,
                                               signClosure: (WalletTransfer) async throws -> Cell) async throws -> String {
         let messages = try payloads.map { payload in
             var stateInit: StateInit?
@@ -83,10 +81,10 @@ public struct TonConnectTransferMessageBuilder {
             if let messagePayload = payload.payload {
                 body = try Cell.fromBase64(src: messagePayload)
             }
-            return MessageRelaxed.internal(
-                to: payload.recipientAddress,
+            return try MessageRelaxed.internal(
+                to: .parse(payload.recipientAddress),
                 value: payload.value.magnitude,
-                bounce: payload.bounceable,
+                bounce: payload.recipientAddress.isTonAddressBounceable(),
                 stateInit: stateInit,
                 body: body)
         }
@@ -94,10 +92,13 @@ public struct TonConnectTransferMessageBuilder {
             .externalMessageTransfer(
                 wallet: wallet,
                 sender: sender ?? (try wallet.address),
-                seqno: seqno, internalMessages: { sender in
+                seqno: seqno,
+                validUntil: validUntil ?? UInt64(Date().timeIntervalSince1970) + 5 * 60,
+                internalMessages: { sender in
                     messages
                 },
-            signClosure: signClosure)
+                signClosure: signClosure
+            )
     }
 }
 
@@ -167,6 +168,7 @@ public struct ExternalMessageTransferBuilder {
                                                sendMode: SendMode = .walletDefault(),
                                                seqno: UInt64,
                                                messageType: MessageType = .ext,
+                                               validUntil: UInt64? = nil,
                                                internalMessages: (_ sender: Address) throws -> [MessageRelaxed],
                                                signClosure: (WalletTransfer) async throws -> Cell) async throws -> String {
         let internalMessages = try internalMessages(sender)
@@ -174,7 +176,7 @@ public struct ExternalMessageTransferBuilder {
             seqno: seqno,
             messages: internalMessages,
             sendMode: sendMode,
-            timeout: nil)
+            timeout: validUntil)
         let contract = try wallet.contract
         let transfer = try contract.createTransfer(
             args: transferData,

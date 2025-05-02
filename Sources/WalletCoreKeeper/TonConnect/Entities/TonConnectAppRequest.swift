@@ -18,8 +18,8 @@ public extension TonConnect {
         
         public struct Param: Decodable {
             public let messages: [Message]
-            public var validUntil: TimeInterval?
-            public let from: Address?
+            public var validUntil: UInt64?
+            public let from: String
             public let network: Network?
             
             enum CodingKeys: String, CodingKey {
@@ -32,16 +32,18 @@ public extension TonConnect {
             public init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
                 messages = try container.decode([Message].self, forKey: .messages)
-                validUntil = try container.decodeIfPresent(TimeInterval.self, forKey: .validUntil)
-                from = try Address.parse(try container.decode(String.self, forKey: .from))
+                validUntil = try container.decodeIfPresentAndFailForNil(UInt64.self, forKey: .validUntil)
+                
+                from = try container.decode(String.self, forKey: .from)
+                try from.validateTonAddress()
+                
                 network = try container.decodeIfPresent(Network.self, forKey: .network)
             }
         }
         
         public struct Message: Decodable {
-            public let address: Address
+            public let address: String
             public let amount: Int64
-            public let bounceable: Bool
             public let stateInit: String?
             public let payload: String?
             
@@ -54,15 +56,17 @@ public extension TonConnect {
             
             public init(from decoder: Decoder) throws {
                 let container = try decoder.container(keyedBy: CodingKeys.self)
-                let addressString = try container.decode(String.self, forKey: .address)
-                address = try Address.parse(addressString)
+                
+                address = try container.decode(String.self, forKey: .address)
+                try address.validateFriendlyAddress()
+                
                 let amountString = try container.decode(String.self, forKey: .amount)
                 if let amount = Int64(amountString) {
                     self.amount = amount
                 } else {
                     throw TonSwift.TonError.custom("Amount is invalid")
                 }
-                bounceable = addressString.isTonAddressBounceable()
+                
                 stateInit = try container.decodeIfPresent(String.self, forKey: .stateInit)
                 payload = try container.decodeIfPresent(String.self, forKey: .payload)
             }
@@ -99,7 +103,33 @@ public extension TonConnect {
 }
 
 private extension String {
-    func isTonAddressBounceable() -> Bool {
-        starts(with: "EQ")
+    func validateFriendlyAddress() throws {
+        if self.contains(":") {
+            throw TonError.custom("Unexpected raw address")
+        }
+        _ = try FriendlyAddress(string: self)
+    }
+    
+    func validateTonAddress() throws {
+        _ = try Address.parse(self)
+    }
+}
+
+private extension KeyedDecodingContainer {
+    func decodeIfPresentAndFailForNil<T>(
+        _ type: T.Type,
+        forKey key: KeyedDecodingContainer<K>.Key
+    ) throws -> T? where T: Decodable {
+        let result = try self.decodeIfPresent(type, forKey: key)
+        
+        if result == nil, self.contains(key) {
+            throw DecodingError.dataCorruptedError(
+                forKey: key,
+                in: self,
+                debugDescription: "Unexpected null value for key \(key.stringValue)"
+            )
+        }
+        
+        return result
     }
 }

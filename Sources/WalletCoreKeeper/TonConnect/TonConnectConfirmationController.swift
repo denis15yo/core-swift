@@ -221,7 +221,8 @@ private extension TonConnectConfirmationController {
                 wallet: wallet,
                 seqno: seqno,
                 payloads: payloads,
-                sender: params.from,
+                sender: .parse(params.from),
+                validUntil: params.validUntil,
                 signClosure: signClosure)
     }
 }
