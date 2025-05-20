@@ -7,12 +7,14 @@
 
 import Foundation
 
-struct TonConnectUrlParser {
+public struct TonConnectUrlParser {
+    public init() {}
+    
     enum Error: Swift.Error {
         case incorrectUrl
     }
     
-    func parseString(_ string: String) throws -> TonConnectParameters {
+    public func parseString(_ string: String) throws -> TonConnectParameters {
         let string = string.replacingPlusSignWithSpace()
         
         guard
