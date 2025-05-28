@@ -40,20 +40,35 @@ extension TonConnect {
             let appName: String
             let appVersion: String
             let maxProtocolVersion: Int
-            let features: [Feature]
+            let features: [AnyFeature]
             
             public init(
                 platform: String = "iphone",
                 appName: String = "Tonkeeper",
                 appVersion: String = "3.4.0",
                 maxProtocolVersion: Int = 2,
-                features: [Feature] = [Feature()]
+                features: [AnyFeature] = [.feature(.init())]
             ) {
                 self.platform = platform
                 self.appName = appName
                 self.appVersion = appVersion
                 self.maxProtocolVersion = maxProtocolVersion
                 self.features = features
+            }
+            
+            public enum AnyFeature: Encodable {
+                case legacy(String)
+                case feature(Feature)
+                
+                public func encode(to encoder: any Encoder) throws {
+                    var container = encoder.singleValueContainer()
+                    switch self {
+                    case let .legacy(string):
+                        try container.encode(string)
+                    case let .feature(feature):
+                        try container.encode(feature)
+                    }
+                }
             }
             
             public struct Feature: Encodable {
@@ -72,8 +87,8 @@ extension TonConnect {
     }
     public struct ConnectEventError: Encodable {
         public struct Payload: Encodable {
-            let code: Error
-            let message: String
+            public let code: Error
+            public let message: String
             
             public init(code: Error, message: String) {
                 self.code = code
