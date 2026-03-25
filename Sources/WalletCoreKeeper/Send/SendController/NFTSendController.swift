@@ -188,7 +188,7 @@ private extension NFTSendController {
             nftAddress: nft.address,
             recipientAddress: recipientAddress,
             transferAmount: transferAmount) { transfer in
-                try transfer.signMessage(signer: WalletTransferEmptyKeySigner())
+                try transfer.signMessageToCell(signer: WalletTransferEmptyKeySigner())
             }
     }
     
@@ -211,10 +211,10 @@ private extension NFTSendController {
             transferAmount: transferAmount.magnitude) { transfer in
                 if wallet.isRegular {
                     let privateKey = try walletProvider.getWalletPrivateKey(wallet)
-                    return try transfer.signMessage(signer: WalletTransferSecretKeySigner(secretKey: privateKey.data))
+                    return try transfer.signMessageToCell(signer: WalletTransferSecretKeySigner(secretKey: privateKey.data))
                 }
                 // TBD: External wallet sign
-                return try transfer.signMessage(signer: WalletTransferEmptyKeySigner())
+                return try transfer.signMessageToCell(signer: WalletTransferEmptyKeySigner())
             }
     }
 

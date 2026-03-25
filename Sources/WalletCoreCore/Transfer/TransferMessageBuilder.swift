@@ -121,10 +121,10 @@ public struct TokenTransferMessageBuilder {
                     let internalMessage = try JettonTransferMessage.internalMessage(
                         jettonAddress: tokenAddress,
                         amount: value,
-                        tonValue: tonValue,
                         bounce: isBounceable,
                         to: recipientAddress,
                         from: sender,
+                        transferAmount: BigUInt(tonValue ?? 0),
                         comment: comment
                     )
                     return [internalMessage]
@@ -153,7 +153,7 @@ public struct NFTTransferMessageBuilder {
                         nftTransferAmount: transferAmount,
                         bounce: isBounceable,
                         to: recipientAddress,
-                        from: sender,
+                        responseAddress: sender,
                         forwardPayload: forwardPayload)
                     return [internalMessage]
                 },

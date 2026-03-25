@@ -78,10 +78,10 @@ public final class TonConnectConfirmationController {
         let boc = try await transactionBoc(forParams: params) { transfer in
             if wallet.isRegular {
                 let privateKey = try walletProvider.getWalletPrivateKey(wallet)
-                return try transfer.signMessage(signer: WalletTransferSecretKeySigner(secretKey: privateKey.data))
+                return try transfer.signMessageToCell(signer: WalletTransferSecretKeySigner(secretKey: privateKey.data))
             }
             // TBD: External wallet sign
-            return try transfer.signMessage(signer: WalletTransferEmptyKeySigner())
+            return try transfer.signMessageToCell(signer: WalletTransferEmptyKeySigner())
         }
 
         try await sendService.sendTransaction(boc: boc)
@@ -152,7 +152,7 @@ private extension TonConnectConfirmationController {
     
     func emulate(appRequestParam: TonConnect.AppRequest.Param) async throws -> TonConnectConfirmationModel {
         async let bocTask = transactionBoc(forParams: appRequestParam) { transfer in
-            try transfer.signMessage(signer: WalletTransferEmptyKeySigner())
+            try transfer.signMessageToCell(signer: WalletTransferEmptyKeySigner())
         }
         async let ratesTask = loadRates()
         

@@ -76,10 +76,10 @@ public final class TokenSendController: SendController {
                 comment: comment) { transfer in
                     if wallet.isRegular {
                         let privateKey = try walletProvider.getWalletPrivateKey(wallet)
-                        return try transfer.signMessage(signer: WalletTransferSecretKeySigner(secretKey: privateKey.data))
+                        return try transfer.signMessageToCell(signer: WalletTransferSecretKeySigner(secretKey: privateKey.data))
                     }
                     // TBD: External wallet sign
-                    return try transfer.signMessage(signer: WalletTransferEmptyKeySigner())
+                    return try transfer.signMessageToCell(signer: WalletTransferEmptyKeySigner())
                 }
             
             try await sendService.sendTransaction(boc: transactionBoc)
@@ -150,7 +150,7 @@ private extension TokenSendController {
             tokenTransferModel: tokenTransferModel,
             recipient: recipient,
             comment: comment,
-            signClosure: { try $0.signMessage(signer: WalletTransferEmptyKeySigner()) })
+            signClosure: { try $0.signMessageToCell(signer: WalletTransferEmptyKeySigner()) })
         
         let rates = await ratesTask
         let transactionBoc = try await transactionBocTask
